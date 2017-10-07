@@ -1,0 +1,10 @@
+Package: GPspline
+Type: Package
+Title: 
+Version: 0.1.0
+Author: Philip Pilgerstorfer
+Maintainer: Philip Pilgerstorfer <philip@pilgerstorfer.org>
+Description: Package for a varying-coefficients spline regression with GP-regularization of the spline coefficients using a separate set of covariates
+License: GPL-2.0
+Encoding: UTF-8
+LazyData: true
