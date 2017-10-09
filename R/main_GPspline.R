@@ -3,7 +3,8 @@
 #' @param y A vector
 #' @param X A data.frame
 #' @param Z A data.frame
-#' @param kernelfun A string (default: SE) -- no other kernels implemented
+#' @param kernelfun A string (default: SE) -- has no effect
+#' @param spline A string (default: "ns" natural cubic spline)
 #' @param myoptim A string (default: Gradient Descent -- GD)
 #' @param maxiter (default: 5000)
 #' @param tol (default: 1e-4)
@@ -13,22 +14,14 @@
 #' @param momentum (default: 0.0)
 #' @return The function returns the fitted process as a GPspline class object
 #' @examples
+#' #Example
 #' #Generate data
 #' n = 120
 #' Z = rbinom(n, 1, 0.3)
-# 'X1 = runif(sum(Z), min = 20, max = 40)
-#' X0 = runif(n-sum(Z), min = 20, max = 40)
-#' X = data.frame(matrix(NaN,n,1))
-#' X[Z==1,] = X1; X[Z==0,] = X0
-#' y0_true = as.matrix(72 + 3 * sqrt(X))
-#' y1_true = as.matrix(90 + exp(0.06 * X))
-#' Y0 = rnorm(n, mean = y0_true, sd = 1)
-#' Y1 = rnorm(n, mean = y1_true, sd = 1)
-#' Y = Y0*(1-Z) + Y1*Z
-#' mystump <- CausalStump(Y,X,Z)
 
-GPspline <- function(y,X,Z,myoptim = "Nadam",maxiter=5000,tol=1e-4,learning_rate=0.01,beta1=0.9,beta2=0.999,momentum=0.0){
-  #check_inputs(y,X,z);
+
+GPspline <- function(y,X,Z,kernelfun = "SE",spline="ns",myoptim = "Nadam",maxiter=5000,tol=1e-4,learning_rate=0.01,beta1=0.9,beta2=0.999,momentum=0.0){
+  #check_inputs(y,X,z); needs revision
 
   n = length(y); px = ncol(X); pz = ncol(Z);
 
