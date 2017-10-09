@@ -1,10 +1,18 @@
 Package: GPspline
 Type: Package
-Title: 
-Version: 0.1.0
+Title: GPspline functional prediction
+Version: 0.0.1
 Author: Philip Pilgerstorfer
 Maintainer: Philip Pilgerstorfer <philip@pilgerstorfer.org>
 Description: Package for a varying-coefficients spline regression with GP-regularization of the spline coefficients using a separate set of covariates
 License: GPL-2.0
 Encoding: UTF-8
 LazyData: true 
+Depends: R (>= 3.3.1)
+Imports: methods,
+         graphics,
+         Rcpp (>= 0.12.12),
+         splines (>= 3.4.1),
+         ggplot2 (>= 2.2.1)
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 6.0.1

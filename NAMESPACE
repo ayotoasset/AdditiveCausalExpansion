@@ -1,1 +1,4 @@
+useDynLib(GPspline, .registration = TRUE)
 exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)
+#importFrom("methods", "new")
