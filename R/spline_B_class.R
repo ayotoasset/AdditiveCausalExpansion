@@ -5,8 +5,7 @@ B_spline <- setRefClass("B_spline",
                                 dim = function(){
                                   (ncol(B)+1); #basis plus nuisance term m()
                                 },
-                                trainbasis = function(Z,n_knots) {
-                                  m <- 4 # with intercept
+                                trainbasis = function(Z,n_knots,m = 4) {
 
                                   #internal knots (within unit circle)
                                   IKnots <- quantile(Z,probs = seq(n_knots)/(n_knots+1))

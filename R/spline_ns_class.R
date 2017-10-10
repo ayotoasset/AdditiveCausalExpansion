@@ -1,5 +1,5 @@
 ns_spline <- setRefClass("ns_spline",
-                        fields = list(myknots = "matrix", #store knot positions
+                        fields = list(myknots = "vector", #store knot positions
                                       B = "matrix",   #design matrix
                                       dB = "matrix"), #derivative of design matrix
                         methods = list(
@@ -12,16 +12,16 @@ ns_spline <- setRefClass("ns_spline",
                             Boundary.knots <- c(-1,1)
                             myknots <<- c(IKnots,Boundary.knots);
 
-                            B <<- ncs_basis(Z,c(IKnots,Boundary.knots))
-                            dB <<- ncs_basis_deriv(Z,c(IKnots,Boundary.knots))
+                            B <<- ncs_basis(Z,myknots)
+                            dB <<- ncs_basis_deriv(Z,myknots)
 
                             B
                           },
                           getbasis = function(Znew){
                             #get new basis matrices
                             if(!missing(Znew)){
-                              Bnew <<- ncs_basis(Znew,myknots)
-                              dBnew <<- ncs_basis_deriv(Znew,myknots)
+                              Bnew <- ncs_basis(Znew,myknots)
+                              dBnew <- ncs_basis_deriv(Znew,myknots)
                             } else {
                               #return stored matrices
                               Bnew <- B
