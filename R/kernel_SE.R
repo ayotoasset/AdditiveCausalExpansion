@@ -1,24 +1,21 @@
 KernelClass_SE <- setRefClass("SqExpKernel",
                                  fields = list(parameters = "list",
-                                               invKmatn = "matrix",
-                                               Kmat = "matrix",
-                                               Km = "matrix",
-                                               Ka = "matrix",
-                                               w = "numeric",
-                                               p = "numeric"),
+                                               invKmatn = "matrix", #training inverse of the Kernel matrix with noise
+                                               Kmat = "matrix", #training Kernel matrix
+                                               K = "list",
+                                               #Ka = "matrix",
+                                               #w = "numeric",
+                                               B = "numeric", #basis dimension
+                                               px = "numeric"),
                                  methods = list(
-                                   parainit = function(y) {
+                                   parainit = function(y,B) {
 
                                      #for momentum and adam
                                      parameters <<- list(sigma=log(var(y)),
-                                                         #sigma_z=log(runif(1,min=1,max=2)),
-                                                         lambdam=log(runif(1,min=0.2,max=1)),
-                                                         lambdaa=log(runif(1,min=0.2,max=1)),
-                                                         Lm=rep(-0.1,p),La=rep(0.1,p),
+                                                         lambda=log(runif(B,min=0.2,max=1)), #vector of lambdas
+                                                         L = rep(list(rep(0.1,p)),B), #list of vectors with ARD weights for SE kernel
                                                          mu = mean(y)
                                      )
-                                     #mu_z = mean(y[z==1]))
-
                                    },
                                    kernel_mat = function(X1,X2,Z1,Z2) {
                                      #intended use for the gardaient step and for prediction
