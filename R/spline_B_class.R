@@ -1,11 +1,8 @@
 B_spline <- setRefClass("B_spline",
-                              fields = list(#n_knots = "numeric", #number of internal knots (input)
-                                            #m = "numeric", #cubic = 4
-                                            #myknots = "numeric", #knots placements for test data
-                                            B = "matrix",   #design matrix and bSpline2 class
-                                            dB = "matrix"), #derivative off design matrix
+                              fields = list(B = "matrix",   #design matrix and bSpline2 class
+                                            dB = "matrix"), #derivative of design matrix
                               methods = list(
-                                basisdim = function(){
+                                dim = function(){
                                   (ncol(B)+1); #basis plus nuisance term m()
                                 },
                                 trainbasis = function(Z,n_knots) {
@@ -28,8 +25,14 @@ B_spline <- setRefClass("B_spline",
                                 },
                                 getbasis = function(Znew){
                                   #get new basis matrices
-                                  Bnew <- splines2::predict.bSpline2(B,ewx=Znew)
-                                  dBnew <- splines2::predict.dbs(dB,newx=Znew)
+                                  if(!missing(Znew)){
+                                    Bnew <- splines2::predict.bSpline2(B,ewx=Znew)
+                                    dBnew <- splines2::predict.dbs(dB,newx=Znew)
+                                  } else {
+                                    #return stored matrices
+                                    Bnew <- B
+                                    dBnew <- dB
+                                  }
 
                                   list(B = Bnew, dB = dBnew)
                                 }
