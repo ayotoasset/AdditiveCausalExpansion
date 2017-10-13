@@ -6,140 +6,217 @@ using namespace arma;
 using namespace Rcpp;
 
 double evid_grad(arma::mat mymat, arma::mat dK) {
-  //grad = - 0.5 * ( sum(diag( tmpK %*% dK ) ) )
-
-  double grad = - 0.5 * trace( mymat * dK);
-
-  return(grad);
-}
-
-Rcpp::List evid_scale_gradients(arma::mat X, arma::mat tmpK,arma::mat Km,arma::mat Ka, Rcpp::List parameters){
-  // produce a (p x 2) matrix "grad" with the gradients of Lm and La in the first and second column, respectively
-  unsigned int n = X.n_rows;
-  unsigned int p = X.n_cols;
-
-  //predefine matrices and temporary storage files
-  arma::vec grad_m(p);
-  arma::vec grad_a(p);
-  arma::mat tmpX(n,n);
-  arma::mat tmpM(n,n);
-  arma::mat tmpA(n,n);
-
-  for(unsigned int i=0; i<p; i++){
-    //tmpX = abs(matrix(rep(X[,i],n),n,n) - t(matrix(rep(X[,i],n),n,n)))
-    for(unsigned int r=0; r< n; r++){
-      tmpX.col(r) = pow(X( r , i ) - X.col(i),2);
-    }
-
-    //Klist$Km * exp( 2*log(tmpX) - parameters$Lm[i] )
-    tmpM = Km % tmpX * exp(- as<arma::vec>(parameters["Lm"])[i]);
-    tmpA = Ka % tmpX * exp(- as<arma::vec>(parameters["La"])[i]);
-
-    grad_m(i) = evid_grad(tmpK,tmpM);
-    //Rcpp::Rcout << grad_m(i) << std::endl;
-    grad_a(i) = evid_grad(tmpK,tmpA);
-  }
-
-  return Rcpp::List::create(Named("m") = grad_m,Named("a") = grad_a );
+  return - 0.5 * trace( mymat * dK);
 }
 
 // [[Rcpp::export]]
-arma::mat invkernel_cpp(arma::colvec z,arma::colvec w, arma::mat mymat, Rcpp::List parameters){
-  //unsigned int n = z.n_cols;
-  //add to diagonal, for loop to minimize unnecessary memory access
-  /*for(unsigned int i=0; i < n; i++){
-    mat(i,i) = mat(i,i) + exp(as<double>(parameters["sigma"]) + as<double>(parameters["sigma_z"]) * z(i) );
-  }*/
-  //neater:
-
-  mymat.diag() += exp(as<double>(parameters["sigma"])) / w; // + as<double>(parameters["sigma_z"]) * z
-  mymat = inv_sympd(mymat);
-
-  return(mymat);
-}
-
-// [[Rcpp::export]]
-double mu_solution_cpp(arma::colvec y, arma::colvec z, arma::mat invKmat, Rcpp::List parameters) {
-  //calculates the exact solutions to the maximization problem
-  double mu = 0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
-
-  //mu(0) = 0.5 * arma::sum(invKmat * ( y - as<double>(parameters["mu_z"]) * z )) / arma::sum(arma::sum(invKmat));
-  //mu(1) = 0.5 * arma::sum( (z.t() * invKmat * ( y - as<double>(parameters["mu"]) ) ) / ( z.t() * invKmat * z ) );
-
-  return(mu);
-}
-
-// [[Rcpp::export]]
-Rcpp::List kernmat_GP_SE_cpp(Rcpp::NumericMatrix X1,Rcpp::NumericMatrix X2,Rcpp::NumericVector Z1,Rcpp::NumericVector Z2, Rcpp::List para) {
+Rcpp::List kernmat_SE_cpp(arma::mat X1,arma::mat X2,arma::mat Z1,arma::mat Z2, Rcpp::List para) {
   //input X1,X2,Z1,Z2,parameters
+  unsigned int n1 = X1.n_rows;
+  unsigned int n2 = X2.n_rows;
+  unsigned int p = X2.n_cols;
+  unsigned int B = Z1.n_cols + 1; //including nuisance term
 
-  //for(i in 1:p){
-  //  tmpX = (matrix(rep(X1[,i],n2),n1,n2) - t(matrix(rep(X2[,i],n1),n2,n1)))^2
-  //  Km        = Km        + tmpX        * exp(-parameters$Lm[i])
-  //  Ka[Zmask] = Ka[Zmask] + tmpX[Zmask] * exp(-parameters$La[i])
-  //}
+  //parameters
+  arma::mat L = para["L"]; // p x B
+  arma::vec lambda = para["lambda"];
 
-  unsigned int n1 = X1.nrow();
-  unsigned int n2 = X2.nrow();
-  unsigned int p = X2.ncol();
-  /*
-  NumericMatrix tmpKm(n1, n2);
-  NumericMatrix tmpKa(n1, n2);
-  std::fill(tmpKm.begin(), tmpKm.end(), 0);
-  std::fill(tmpKa.begin(), tmpKa.end(), 0);
-  */
-  arma::mat tmpKm(n1,n2); tmpKm.zeros();
-  arma::mat tmpKa(n1,n2); tmpKa.zeros();
-
+  //(help) storage variables
+  arma::mat Kfull(n1, n2);
   arma::rowvec tmprow(n2);
+  arma::cube tmpX(n1,n2,B); tmpX.zeros(); //reuse for all additive elements
+  // storage cost for training set: O(n^2*B)
 
-  NumericVector Lm = as<NumericVector>(para["Lm"]);
-  NumericVector La = as<NumericVector>(para["La"]);
-
-  //Rcpp::Rcout << p <<std::endl;
-  //Rcpp::Rcout << Lm.size() << std::endl;
-  //Rcpp::Rcout << La.size() << std::endl;
-  //double tmp;
-  //arma::rowvec tmp2(n2);
-
-  for(unsigned int i=0;i < p;i++){
-    //for every output row
-    for(unsigned int r=0;r < n1;r++){
-      tmprow = pow(X1( r , i ) - X2( _, i),2);
-      //Rcpp::Rcout << tmprow << std::endl;
-
-      //Rcpp::Rcout << std::endl << tmp << std::endl;
-      //Rcpp::Rcout << std::endl << tmp2 << std::endl;
-      tmpKm.row(r) += tmprow * exp(- Lm(i) );
-      tmpKa.row(r) += tmprow * exp(- La(i) );
-      //tmpKm(r,_) = tmpKm(r,_) + tmp;
-      //tmpKa(r,_) = tmpKa(r,_) + tmp2;
-
+  for(unsigned int i = 0; i < p; i++){ // for every element of x
+    for(unsigned int r = 0; r < n1; r++){ //for every output row
+      tmprow = pow(X1(r,i) - conv_to<rowvec>::from(X2.col(i)), 2);
+      for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
+        tmpX.slice(b).row(r) += tmprow * exp(- L(i,b) );
+      }
     }
   }
 
-  double lambda_m = as<double>(para["lambdam"]);
-  double lambda_a = as<double>(para["lambdaa"]);
-  //Rcpp::Rcout << "lambdas" <<std::endl;
-  //Rcpp::Rcout << lambda_m << "  " << lambda_a <<std::endl;
-
-  Rcpp::NumericMatrix tmpK(n1, n2);
-
-  for(unsigned int r = 0; r < n1; r++){
-    for(unsigned int c = 0; c < n2; c++){
-      tmpKm(r,c) = exp(lambda_m - tmpKm(r,c));
-      tmpKa(r,c) = exp(lambda_a - tmpKa(r,c)) * Z1(r) * Z2(c);
-      tmpK(r,c) = tmpKm(r,c) + tmpKa(r,c) ;
+  //outest-most iteration is basis dimension
+  tmpX.slice(0) = exp(lambda[0] - tmpX.slice(0));
+  Kfull = tmpX.slice(0);
+  for(unsigned int b = 1; b < B; b++){
+    for(unsigned int r = 0; r < n1; r++){
+      if (Z1(r,b-1)==0 ) {tmpX.slice(b).row(r).fill(0); continue;}
+      for(unsigned int c = 0; c < n2; c++){
+        if (Z2(c,b-1)==0 ) {tmpX(r,c,b)=0; continue;}
+        tmpX(r,c,b) = exp(lambda[b] - tmpX(r,c,b)) * Z1(r,b-1) * Z2(c,b-1);
+      }
     }
+    Kfull += tmpX.slice(b);
   }
 
   //Put matrices in a list
-  Rcpp::List out; out["Kmat"] = tmpK; out["Km"] = tmpKm; out["Ka"] = tmpKa;
+  Rcpp::List out; out["full"] = Kfull; out["elements"] = tmpX;
   return(out);
-  //return 0;
+}
+
+//more efficient with pointers and a class but well
+arma::mat uppertri2symmat(arma::vec matvec,unsigned int dim){
+  arma::mat out(dim,dim);
+  unsigned int cnt = 0;
+  for(unsigned int r = 0; r < dim; r++ ){
+    for(unsigned int c = r; c < dim; c++ ){
+      out(r,c) = matvec(cnt);
+      out(c,r) = matvec(cnt);
+      cnt++;
+    }
+  }
+  return out;
 }
 
 
+// [[Rcpp::export]]
+Rcpp::List kernmat_SE_symmetric_cpp(arma::mat X,arma::mat Z, Rcpp::List para) {
+  //input X1,X2,Z1,Z2,parameters
+  unsigned int n = X.n_rows;
+  unsigned int p = X.n_cols;
+  unsigned int B = Z.n_cols + 1; //including nuisance term
+  unsigned int cnt=0;
+
+  //parameters
+  arma::mat L = para["L"]; // p x B
+  arma::vec lambda = para["lambda"];
+
+  //(help) storage variables
+  double tmp = 0;
+  arma::mat tmpX(n*(n+1)/2,B); tmpX.zeros();
+  arma::mat Kfull(n,n);// Kfull.zeros();
+  arma::cube Ks(n,n,B); Ks.zeros();
+
+  for(unsigned int i = 0; i < p; i++){ // for every element of x
+    cnt = 0;
+    for(unsigned int r = 0; r < n; r++){ //for every output row
+      for(unsigned int c = r; c < n; c++){
+        tmp = pow(X(r,i) - X(c,i),2);
+        for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
+          tmpX(cnt,b) += tmp * exp(- L(i,b) );
+        } cnt++;
+      }
+    }
+  }
+
+  tmpX.col(0) = exp(lambda[0] - tmpX.col(0) ); Ks.slice(0) = uppertri2symmat( tmpX.col(0), n);
+  for(unsigned int b = 1; b < B; b++){
+    cnt=0;
+    for(unsigned int r = 0; r < n; r++){
+      if (Z(r,b-1)==0 ) { // need to increase counter by the number of upper-triangle elements we skip
+        tmpX.submat(cnt,b,cnt+(n-r)-1,b).fill(0); cnt += n-r;
+        continue; }
+      for(unsigned int c = r; c < n; c++){
+        tmpX(cnt,b) = exp(lambda[b] - tmpX(cnt,b) ) * Z(r,b-1) * Z(c,b-1); // replace each element of tmpX
+        cnt++;
+      }
+    }
+    // being done with the elements in tmpX we use it to construct the kernel matrices in an efficient way
+    Ks.slice(b) = uppertri2symmat( tmpX.col(b), n );
+    for(unsigned int j = 0; j < n*(n+1)/2; j++){ tmpX(j,0) += tmpX(j,b); }
+  }
+  Kfull = uppertri2symmat(tmpX.col(0), n); //sum sparse vectorization instead of matrices
+
+  //Put matrices in a list
+  Rcpp::List out; out["full"] = Kfull; out["elements"] = Ks;
+  return(out);
+}
+
+// [[Rcpp::export]]
+arma::rowvec stats_SE(arma::colvec y, arma::mat Kmat, Rcpp::List invKList, Rcpp::List parameters) {
+  Rcpp::List gradients = clone(parameters); //for the same list structure
+
+  unsigned int n = y.size();
+  //preallocate memory
+  arma::rowvec stats(2);
+  arma::colvec ybar(n);
+  arma::colvec alpha(n);
+  arma::mat invKmatn(n,n); invKmatn.fill(invKList["inv"]);
+
+  ybar = y - as<double>(parameters["mu"]); //
+  alpha = invKmatn * ybar;
+
+  //RMSE
+  stats(0) = pow(arma::norm(y - (Kmat * alpha + as<double>(parameters["mu"]))),2);
+
+  //Evidence
+  double val = sum(log(as<arma::vec>(invKList["eigenval"])));
+  //double sign; arma::log_det(val,sign,invKmatn);  //logdet of INVERSE -> -val
+  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + val + arma::dot( ybar, alpha ) ) ;
+
+  return stats;
+}
+
+// [[Rcpp::export]]
+Rcpp::List invkernel_cpp(arma::mat mymat, Rcpp::List parameters){
+  unsigned int n = mymat.n_cols;
+  arma::vec eigval(n);
+  arma::mat eigvec(n,n);
+  mymat.diag() += exp(as<double>(parameters["sigma"]));
+  arma::eig_sym( eigval, eigvec, mymat);
+
+  arma::mat invKmat(n,n); invKmat = eigvec;
+  for(unsigned int i = 0; i < n; i++){
+    invKmat.col(i) = invKmat.col(i) / eigval[i];
+  }
+  invKmat = invKmat * eigvec.t();
+  Rcpp::List out; out["eignval"] = eigval;  out["inv"] = invKmat; //out["eigenvec"] = eigvec;
+  return out;
+}
+
+
+///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
+
+
+/*
+
+ Rcpp::List evid_scale_gradients(arma::mat X, arma::mat tmpK,
+ Rcpp::List K,
+Rcpp::List parameters){
+// produce a (p x 2) matrix "grad" with the gradients of Lm and La in the first and second column, respectively
+unsigned int n = X.n_rows;
+unsigned int p = X.n_cols;
+
+//predefine matrices and temporary storage files
+arma::vec grad_m(p);
+arma::vec grad_a(p);
+arma::mat tmpX(n,n);
+arma::mat tmpM(n,n);
+arma::mat tmpA(n,n);
+
+arma::mat L = para["L"]; // p x B
+arma::vec lambda = para["lambda"];
+
+for(unsigned int i=0; i<p; i++){
+//tmpX = abs(matrix(rep(X[,i],n),n,n) - t(matrix(rep(X[,i],n),n,n)))
+for(unsigned int r=0; r< n; r++){
+tmpX.col(r) = pow(X(r, i) - X.col(i),2);
+}
+
+//Klist$Km * exp( 2*log(tmpX) - parameters$Lm[i] )
+// NEED TO REWRITE FOR MATRIX L
+tmpM = Km % tmpX * exp(- as<arma::vec>(L[b])[i]);
+//tmpA = Ka % tmpX * exp(- as<arma::vec>(parameters["La"])[i]);
+
+grad_m(i) = evid_grad(tmpK,tmpM);
+//Rcpp::Rcout << grad_m(i) << std::endl;
+grad_a(i) = evid_grad(tmpK,tmpA);
+}
+
+return Rcpp::List::create(Named("m") = grad_m,Named("a") = grad_a );
+}
+
+// [[Rcpp::export]]
+double mu_solution_cpp(arma::colvec y, arma::mat invKmat) {
+  //calculates the exact solutions to the maximization problem
+  //double mu = 0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
+  //return mu;
+  return  0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
+}
+*/
+
+/*
 // [[Rcpp::export]]
 Rcpp::List grad_GP_SE_cpp(arma::colvec y, arma::mat X, arma::colvec z,arma::colvec w, arma::mat Kmat, arma::mat Km, arma::mat Ka, arma::mat invKmatn, Rcpp::List parameters) {
   Rcpp::List gradients = clone(parameters); //for the same list structure
@@ -201,32 +278,9 @@ Rcpp::List grad_GP_SE_cpp(arma::colvec y, arma::mat X, arma::colvec z,arma::colv
   return Rcpp::List::create(Named("gradients") = gradients,Named("stats") = stats );
 }
 
-// [[Rcpp::export]]
-arma::rowvec stats_GP_SE(arma::colvec y, arma::mat Kmat, arma::mat invKmatn, Rcpp::List parameters) {
-  Rcpp::List gradients = clone(parameters); //for the same list structure
-
-  unsigned int n = y.size();
-  //preallocate memory
-  arma::rowvec stats(2);
-  arma::colvec ybar(n);
-  arma::colvec alpha(n);
-
-  ybar = y - as<double>(parameters["mu"]); // - parameters["mu_z"]
-  alpha = invKmatn * ybar;
-
-  //RMSE
-  stats(0) = pow(arma::norm(y - (Kmat * alpha + as<double>(parameters["mu"]))),2);
-
-  //Evidence
-  double val;
-  double sign;
-  arma::log_det(val,sign,invKmatn);  //logdet of INVERSE -> -val
-  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) - val + arma::dot( ybar, alpha ) ) ;
-
-  return stats;
-}
 
 
 
 
 
+*/

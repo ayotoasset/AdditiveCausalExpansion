@@ -37,18 +37,19 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      Kmat <- Klist$full
                                      Karray <- Klist$elements
 
-                                     invKmatn <<- invkernel_cpp(z,w,Kmat,parameters) #no error handling, return eigenvalues!
+                                     invKmatList <- invkernel_cpp(z,w,Kmat,parameters) #no error handling, return eigenvalues!
+                                     invKmatn <<- invKmatList$inv
 
-                                     list(invKmatn,Kmat) #,Ka)?
+                                     invKmatList
 
                                      #eigenvalues?? for quick stats calculation
                                    },
                                    para_update = function(iter,y,X,z,Optim) {
                                      #update Kmat and invKmat in the class environment
 
-                                     getinv_kernel(X,z);
+                                     invKmatList <- getinv_kernel(X,z);
 
-                                     gradlist = grad_GP_SE_cpp(y,as.matrix(X),z,w,Kmat,Km,Ka,invKmatn,parameters)
+                                     gradlist = grad_SE_cpp(y,as.matrix(X),z,Kmat,Karray,invKmatList,parameters)
                                      gradients = gradlist$gradients; stats = gradlist$stats
                                      #gradients$Lm = as.numeric(gradients$Lm)
                                      #gradients$La = as.numeric(gradients$La)
@@ -56,14 +57,15 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      mean_solution(y,z)
 
                                      if(iter%%100 == 0){ cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1])) }
-                                     get_train_stats(y,X,z)
+                                     get_train_stats(y,X,z,invKmatList)
                                      stats
                                    },
-                                   get_train_stats = function(y,X,z){
-                                     getinv_kernel(X,z);
+                                   get_train_stats = function(y,X,z,invKmatList){
+                                     if(missing(invKmatList)){
+                                       invKmatList <- getinv_kernel(X,z)
+                                     }
 
-                                     #gradlist = grad_SE_cpp(y,as.matrix(X),z,w,Kmat,Km,Ka,invKmatn,parameters)
-                                     stats = stats_GP_SE(y,Kmat, invKmatn, parameters)
+                                     stats = stats_SE(y,Kmat, invKmatList, parameters)
 
                                    },
                                    mean_solution = function(y,z){
