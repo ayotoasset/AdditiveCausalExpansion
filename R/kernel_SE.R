@@ -1,10 +1,9 @@
 KernelClass_SE <- setRefClass("SqExpKernel",
                                  fields = list(parameters = "list",
                                                invKmatn = "matrix", #training inverse of the Kernel matrix with noise
-                                               Kmat = "matrix", #training Kernel matrix
-                                               K = "list",
-                                               #Ka = "matrix",
-                                               #w = "numeric",
+                                               Kmat = "matrix", #kernel matrix
+                                               Karray = "array", #training Kernel matrices
+                                               K = "list", #list of kernels
                                                B = "numeric", #basis dimension
                                                px = "numeric"),
                                  methods = list(
@@ -13,7 +12,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      #for momentum and adam
                                      parameters <<- list(sigma=log(var(y)),
                                                          lambda=log(runif(B,min=0.2,max=1)), #vector of lambdas
-                                                         L = rep(list(rep(0.1,p)),B), #list of vectors with ARD weights for SE kernel
+                                                         L = matrix(0.1,p,B), #list of vectors with ARD weights for SE kernel
                                                          mu = mean(y)
                                      )
                                    },
@@ -21,23 +20,28 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      #intended use for the gardaient step and for prediction
                                      X1 = as.matrix(X1); #otherwise I need to rewrite the kernel function
                                      X2 = as.matrix(X2);
+                                     Z1 = as.matrix(Z1); #basis
+                                     Z2 = as.matrix(Z2); #basis
 
-                                     Klist = kernmat_GP_SE_cpp(X1,X2,z1,z2,parameters)
+                                     Klist = kernmat_SE_cpp(X1,X2,Z1,Z2,parameters)
+                                     Kmat <<- Klist$full
+                                     Karray <<- Klist$elements
 
                                    },
-                                   getinv_kernel = function(X,z) {
+                                   getinv_kernel = function(X,Z) {
                                      #get matrices and return inverse for prediction, maybe return Ka in a later stage
 
 
                                      #get new kernel and invert with noise
-                                     Klist = kernel_mat(X,X,z,z);
+                                     Klist = kernel_mat(X,X,Z,Z);
+                                     Kmat <- Klist$full
+                                     Karray <- Klist$elements
 
-                                     Kmat <<- Klist[[1]]
-                                     Km   <<- Klist[[2]]
-                                     Ka   <<- Klist[[3]]
+                                     invKmatn <<- invkernel_cpp(z,w,Kmat,parameters) #no error handling, return eigenvalues!
 
-                                     invKmatn <<- invkernel_cpp(z,w,Kmat,parameters) #no error handling
                                      list(invKmatn,Kmat) #,Ka)?
+
+                                     #eigenvalues?? for quick stats calculation
                                    },
                                    para_update = function(iter,y,X,z,Optim) {
                                      #update Kmat and invKmat in the class environment
