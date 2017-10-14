@@ -13,6 +13,7 @@ ns_spline <- setRefClass("ns_spline",
                             myknots <<- c(IKnots,Boundary.knots);
 
                             B <<- ncs_basis(Z,myknots)
+                            #not really needed:
                             dB <<- ncs_basis_deriv(Z,myknots)
 
                             B
