@@ -56,45 +56,35 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                        invKmatList <- getinv_kernel(X,z)
                                      }
 
-                                     stats <- stats_SE(y,Kmat, invKmatList$inv,invKmatList$eigenval, parameters$mu)
+                                     stats <- stats_SE_cpp(y,Kmat, invKmatList$inv,invKmatList$eigenval, parameters$mu)
 
                                    },
-                                   mean_solution = function(y,z){
+                                   mean_solution = function(y){
                                      #using analytic solution
                                      parameters$mu <<- mu_solution_cpp(y, invKmatn)
                                      #parameters <<- parameters #??????
                                    },
-                                   predict = function(y,X,z,X2,z2){
+                                   predict = function(y,X,Z,X2,Z2){
                                      n2 = nrow(X2)
 
-                                     K_xX = kernel_mat(X2,X,z2,z)$full
-                                     K_xx = kernel_mat_sym(X2,z2)$full
+                                     K_xX = kernel_mat(X2,X,Z2,Z)$full
+                                     K_xx = kernel_mat_sym(X2,Z2)$full
 
-                                     #map: put in cpp
-                                     map = K_xX %*% invKmatn %*% (y - parameters$mu) + parameters$mu
-                                     cov = K_xx - K_xX %*% invKmatn %*% t(K_xX) + exp(parameters$sigma) * diag(n2)
-                                     uncentered_ci = cbind(-1.96*diag(cov),1.96 * diag(cov))
-                                     list(map=map,ci=uncentered_ci)
+                                     outlist <- pred_cpp(y, parameters$sigma,parameters$mu,invKmatn, K_xX, K_xx)
                                    },
-                                   predict_treat = function(y,X,z,X2){
+                                   predict_treat = function(y,X,Z,X2,dZ2,isbinary){
+
                                      n = length(y);
                                      n2 = nrow(X2)
-                                     z2 = rep(1,n2)
 
-                                     K_xX = kernel_mat(X2,X,z2,z)$elements
-                                     K_xx = kernel_mat_sym(X2,z2)$elements
+                                     Kmarginal_xX = kernel_mat(X2,X,dZ2,Z)$elements
+                                     Kmarginal_xx = kernel_mat_sym(X2,dZ2)$elements
 
-                                     #map
-                                     map = K_xX %*% invKmatn %*% (y - parameters$mu)
-                                     ate = mean(map);
-
-                                     #ci
-                                     cov = K_xx - K_xX %*% invKmatn %*% t(K_xX)
-                                     uncentered_ci = cbind(-1.96*diag(cov),1.96 * diag(cov))
-                                     ate_cov = sum(sum(cov))/(n^2);
-                                     ate_uncentered_ci = cbind( -1.96 * sqrt(ate_cov), 1.96 * sqrt(ate_cov) )
-
-                                     list(map=map,ci=uncentered_ci,ate_map = ate , ate_ci =  ate_uncentered_ci)
+                                     outlist <- pred_cpp(y,
+                                                         parameters$sigma,parameters$mu,
+                                                         invKmatn,
+                                                         Kmarginal_xX, Kmarginal_xx,
+                                                         isbinary)
                                    }
                                  )
 )

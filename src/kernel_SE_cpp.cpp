@@ -114,7 +114,7 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X, const arma::mat& Z, arma
 }
 
 // [[Rcpp::export]]
-arma::rowvec stats_SE(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, arma::vec& eigenval, double mu) {
+arma::rowvec stats_SE_cpp(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, arma::vec& eigenval, double mu) {
   //Rcpp::List gradients = clone(parameters); //for the same list structure
 
   unsigned int n = y.size();
@@ -153,6 +153,8 @@ Rcpp::List invkernel_cpp(arma::mat pdmat, const double& sigma){
                             _("inv") = invKmat); //out["eigenvec"] = eigvec;
 }
 
+///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// gradients
+
 // [[Rcpp::export]]
 double mu_solution_cpp(arma::colvec& y, arma::mat& invKmat) {
   //calculates the exact solutions to the maximization problem
@@ -161,7 +163,6 @@ double mu_solution_cpp(arma::colvec& y, arma::mat& invKmat) {
   return  0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
 }
 
-///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
 double evid_grad(arma::mat& Kaa, arma::mat& dK) {
   return - 0.5 * arma::trace( Kaa * dK);
 }
@@ -186,13 +187,12 @@ arma::mat evid_scale_gradients(arma::mat& X, arma::mat& Kaa, arma::cube& K, arma
 }
 
 // reduced to only an output list due to specification of the optimizers
-Rcpp::List grad_GP_SE_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
+Rcpp::List grad_SE_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
                           arma::mat& Kfull, arma::cube& K, arma::mat& invKmatn, arma::vec& eigenval,
-                          double sigma, double mu, arma::vec lambda, arma::mat L,
+                          double sigma, arma::vec lambda, arma::mat L, double mu,
                           arma::vec& stats) {
 
   unsigned int n = X.n_rows;
-  unsigned int p = X.n_cols;
   unsigned int B = Z.n_cols;
 
   arma::colvec ybar(n);
@@ -230,3 +230,73 @@ Rcpp::List grad_GP_SE_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
                             _("mu") = mu);
 }
 
+///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// credible intervals
+
+Rcpp::List pred_cpp(const arma::vec& y_X, double sigma,double mu,const arma::mat& invK_XX, arma::mat& K_xX,arma::mat K_xx){
+  unsigned int nx = K_xx.n_rows;
+  unsigned int nX = invK_XX.n_rows;
+
+  arma::vec y_x(nx);
+  arma::mat ci(nx,2);
+  arma::mat tmp(nx,nX);
+
+  tmp = K_xX * invK_XX;
+  y_x = tmp * (y_X - mu) + mu;
+
+  K_xx = K_xx - tmp * K_xX.t();
+  K_xx.diag() += exp(sigma);
+
+  ci.col(2) = 1.96 * sqrt(K_xx.diag());
+  ci.col(1) = y_x + ci.col(2);
+  ci.col(1) = y_x - ci.col(2);
+
+  return Rcpp::List::create(_("map") = y_x,
+                            _("ci") = ci);
+}
+
+Rcpp::List pred_marginal_cpp(const arma::vec& y_X, double sigma, double mu,
+                             const arma::mat& invK_XX,
+                             const arma::cube& K_xX, const arma::cube& K_xx,
+                             bool isbinary){ // cube argins for x-kernel matrices
+  unsigned int nx = K_xx.slice(0).n_rows;
+  unsigned int nX = invK_XX.n_rows;
+  unsigned int B = K_xx.n_slices;
+
+  arma::vec y_x(nx);
+  arma::mat ci(nx,2);
+  arma::mat tmp(nx,nX);
+
+  arma::mat Kmarg_xx(nx,nx); Kmarg_xx.zeros();
+  arma::mat Kmarg_xX(nx,nx); Kmarg_xx.zeros();
+  for(unsigned int b=1; b < B; b++){ // not the "constant" nuisance term
+    Kmarg_xx += K_xx.slice(b); //cumsum only for matrices
+    Kmarg_xX += K_xX.slice(b);
+  }
+
+  tmp = Kmarg_xX * invK_XX;
+  y_x = tmp * (y_X - mu) + mu;
+
+  Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t();
+  Kmarg_xx.diag() += exp(sigma);
+
+  ci.col(2) = 1.96 * sqrt(Kmarg_xx.diag());
+  ci.col(1) = y_x - ci.col(2);
+  ci.col(2) = y_x + ci.col(2);
+  if(!isbinary){
+    return Rcpp::List::create(_("map") = y_x,
+                              _("ci") = ci);
+  } else {
+    double ate = mean(y_x);
+    arma::vec ate_ci(2);
+
+    //eficient ci calculation
+    ate_ci(2) = sum(sum(Kmarg_xx))/pow(nx,2);
+    ate_ci(1) = ate - ate_ci(2);
+    ate_ci(2) = ate + ate_ci(2);
+
+    return Rcpp::List::create(_("map") = y_x,
+                              _("ci") = ci,
+                              _("ate_map") = ate,
+                              _("ate_ci") = ate_ci);
+  }
+}
