@@ -5,21 +5,18 @@
 using namespace arma;
 using namespace Rcpp;
 
-double evid_grad(arma::mat mymat, arma::mat dK) {
+double evid_grad(arma::mat& mymat, arma::mat& dK) {
   return - 0.5 * trace( mymat * dK);
 }
 
 // [[Rcpp::export]]
-Rcpp::List kernmat_SE_cpp(arma::mat X1,arma::mat X2,arma::mat Z1,arma::mat Z2, Rcpp::List para) {
+Rcpp::List kernmat_SE_cpp(const arma::mat& X1,const arma::mat& X2,const arma::mat& Z1,const arma::mat& Z2,
+                          arma::vec lambda, arma::mat& L) {
   //input X1,X2,Z1,Z2,parameters
   unsigned int n1 = X1.n_rows;
   unsigned int n2 = X2.n_rows;
   unsigned int p = X2.n_cols;
   unsigned int B = Z1.n_cols + 1; //including nuisance term
-
-  //parameters
-  arma::mat L = para["L"]; // p x B
-  arma::vec lambda = para["lambda"];
 
   //(help) storage variables
   arma::mat Kfull(n1, n2);
@@ -50,9 +47,8 @@ Rcpp::List kernmat_SE_cpp(arma::mat X1,arma::mat X2,arma::mat Z1,arma::mat Z2, R
     Kfull += tmpX.slice(b);
   }
 
-  //Put matrices in a list
-  Rcpp::List out; out["full"] = Kfull; out["elements"] = tmpX;
-  return(out);
+  return Rcpp::List::create(_("full") =  Kfull,
+                            _("elements") = tmpX);
 }
 
 //more efficient with pointers and a class but well
@@ -71,16 +67,16 @@ arma::mat uppertri2symmat(arma::vec matvec,unsigned int dim){
 
 
 // [[Rcpp::export]]
-Rcpp::List kernmat_SE_symmetric_cpp(arma::mat X,arma::mat Z, Rcpp::List para) {
+Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X, const arma::mat& Z, arma::vec lambda, arma::mat& L) {
   //input X1,X2,Z1,Z2,parameters
   unsigned int n = X.n_rows;
   unsigned int p = X.n_cols;
   unsigned int B = Z.n_cols + 1; //including nuisance term
-  unsigned int cnt=0;
+  unsigned int cnt;
 
   //parameters
-  arma::mat L = para["L"]; // p x B
-  arma::vec lambda = para["lambda"];
+  //arma::mat L = para["L"]; // p x B
+  //arma::vec lambda = para["lambda"];
 
   //(help) storage variables
   double tmp = 0;
@@ -118,53 +114,57 @@ Rcpp::List kernmat_SE_symmetric_cpp(arma::mat X,arma::mat Z, Rcpp::List para) {
   }
   Kfull = uppertri2symmat(tmpX.col(0), n); //sum sparse vectorization instead of matrices
 
-  //Put matrices in a list
-  Rcpp::List out; out["full"] = Kfull; out["elements"] = Ks;
-  return(out);
+  return Rcpp::List::create(_("full") =  Kfull,
+                            _("elements") = Ks);
 }
 
 // [[Rcpp::export]]
-arma::rowvec stats_SE(arma::colvec y, arma::mat Kmat, Rcpp::List invKList, Rcpp::List parameters) {
-  Rcpp::List gradients = clone(parameters); //for the same list structure
+arma::rowvec stats_SE(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, arma::vec& eigenval, double mu) {
+  //Rcpp::List gradients = clone(parameters); //for the same list structure
 
   unsigned int n = y.size();
   //preallocate memory
   arma::rowvec stats(2);
-  arma::colvec ybar(n);
   arma::colvec alpha(n);
-  arma::mat invKmatn(n,n); invKmatn.fill(invKList["inv"]);
 
-  ybar = y - as<double>(parameters["mu"]); //
-  alpha = invKmatn * ybar;
+  y = y - mu; //
+  alpha = invKmatn * y;
 
   //RMSE
-  stats(0) = pow(arma::norm(y - (Kmat * alpha + as<double>(parameters["mu"]))),2);
+  stats(0) = pow(arma::norm(y - (Kmat * alpha)),2);
 
   //Evidence
-  double val = sum(log(as<arma::vec>(invKList["eigenval"])));
+  double val = sum(log(eigenval));
   //double sign; arma::log_det(val,sign,invKmatn);  //logdet of INVERSE -> -val
-  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + val + arma::dot( ybar, alpha ) ) ;
+  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + val + arma::dot( y, alpha ) ) ;
 
   return stats;
 }
 
 // [[Rcpp::export]]
-Rcpp::List invkernel_cpp(arma::mat mymat, Rcpp::List parameters){
-  unsigned int n = mymat.n_cols;
+Rcpp::List invkernel_cpp(arma::mat pdmat, const double& sigma){
+  unsigned int n = pdmat.n_cols;
   arma::vec eigval(n);
   arma::mat eigvec(n,n);
-  mymat.diag() += exp(as<double>(parameters["sigma"]));
-  arma::eig_sym( eigval, eigvec, mymat);
+  pdmat.diag() += exp(sigma);
+  arma::eig_sym( eigval, eigvec, pdmat);
 
   arma::mat invKmat(n,n); invKmat = eigvec;
   for(unsigned int i = 0; i < n; i++){
     invKmat.col(i) = invKmat.col(i) / eigval[i];
   }
   invKmat = invKmat * eigvec.t();
-  Rcpp::List out; out["eignval"] = eigval;  out["inv"] = invKmat; //out["eigenvec"] = eigvec;
-  return out;
+  return Rcpp::List::create(_("eigenval") =  eigval,
+                            _("inv") = invKmat); //out["eigenvec"] = eigvec;
 }
 
+// [[Rcpp::export]]
+double mu_solution_cpp(arma::colvec& y, arma::mat& invKmat) {
+  //calculates the exact solutions to the maximization problem
+  //double mu = 0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
+  //return mu;
+  return  0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
+}
 
 ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
 
@@ -207,13 +207,7 @@ grad_a(i) = evid_grad(tmpK,tmpA);
 return Rcpp::List::create(Named("m") = grad_m,Named("a") = grad_a );
 }
 
-// [[Rcpp::export]]
-double mu_solution_cpp(arma::colvec y, arma::mat invKmat) {
-  //calculates the exact solutions to the maximization problem
-  //double mu = 0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
-  //return mu;
-  return  0.5 * arma::sum(invKmat * y ) / arma::sum(arma::sum(invKmat));
-}
+
 */
 
 /*
