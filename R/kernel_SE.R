@@ -3,9 +3,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                                invKmatn = "matrix", #training inverse of the Kernel matrix with noise
                                                Kmat = "matrix", #kernel matrix
                                                Karray = "array", #training Kernel matrices
-                                               K = "list", #list of kernels
-                                               B = "numeric", #basis dimension
-                                               px = "numeric"),
+                                               B = "numeric"), #basis dimension
                                  methods = list(
                                    parainit = function(y,B) {
 
@@ -18,25 +16,14 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    },
                                    kernel_mat = function(X1,X2,Z1,Z2) {
                                      #intended use for prediction
-                                     X1 = as.matrix(X1);
-                                     X2 = as.matrix(X2);
-                                     Z1 = as.matrix(Z1);
-                                     Z2 = as.matrix(Z2);
-
-                                     Klist = kernmat_SE_cpp(X1,X2,Z1,Z2,parameters$lambda,parameters$L)
-                                     #Kmat <<- Klist$full
-                                     #Karray <<- Klist$elements
+                                     Klist <- kernmat_SE_cpp(X1,X2,Z1,Z2,parameters$lambda,parameters$L)
 
                                    },
                                    kernel_mat_sym = function(X1,Z2) {
-                                     #intended use for the gardaient step
-                                     X = as.matrix(X1);
-                                     Z = as.matrix(Z2);
-
+                                     #intended use for the gradient step
                                      Klist = kernmat_SE_sym_cpp(X,Z,parameters$lambda,parameters$L)
                                      Kmat <<- Klist$full
                                      Karray <<- Klist$elements
-
                                    },
                                    getinv_kernel = function(X,Z) {
                                      #get matrices and return inverse for prediction
@@ -75,7 +62,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    mean_solution = function(y,z){
                                      #using analytic solution
                                      parameters$mu <<- mu_solution_cpp(y, invKmatn)
-                                     parameters <<- parameters #??????
+                                     #parameters <<- parameters #??????
                                    },
                                    predict = function(y,X,z,X2,z2){
                                      n2 = nrow(X2)
