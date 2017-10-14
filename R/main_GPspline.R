@@ -1,12 +1,12 @@
 #' Fit a spline model with Gaussian process coefficients
 #'
-#' @param y A vector
-#' @param X A data.frame
-#' @param Z A vector (multivariate / tensor splines might be added in the future)
+#' @param y A numeric vector
+#' @param X A numeric vector or matrix
+#' @param Z A vector or matrix (multivariate / tensor splines might be added in the future) Factors will be transformed to numeric using as.numeric. Hence, non-binary actors are discouraged especially when they are not ordinal.
 #' @param kernelfun A string (default: "SE" Squared exponential with ARD) -- has no effect, might include (ARD) polynomial and Matern 5/2 kernel
 #' @param spline A string (default: "ns" natural cubic spline for continuous or discrete Z and "binary" if Z is binary (factor)
 #' @param n.knots An integer denoting the  umber of internal knots of the spline of Z
-#' @param myoptim A string (default: Gradient Descent -- GD)
+#' @param myoptim A string (default: "GD" gradient descent). Other options are "Nesterov" (accelerated gradient/momentum), "Adam", and "Nadam" (Nesterov-Adam).
 #' @param maxiter (default: 5000) Maximum number of iterations of the empirical Bayes optimization
 #' @param tol (default: 1e-4) Stopping tolerance for the empirical Bayes optimization
 #' @param learning_rate (default: 0.01) Learning rate for the empirical Bayes optimization
@@ -23,15 +23,17 @@
 
 
 GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "Nadam",maxiter=5000,tol=1e-4,learning_rate=0.01,beta1=0.9,beta2=0.999,momentum=0.0){
-  #check_inputs(y,X,z); needs revision
-
+  if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
   n = length(y); px = ncol(X); pz = ncol(Z);
 
+  X <- as.matrix(as.numeric(X))
+  if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
+  Z <- as.matrix(as.numeric(Z))
+  if( !all(dim(X)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.")
+  if( !all(dim(Z)==c(n,pz)) ) stop("Dimension of Z not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.")
+
   #normalize variables
-  #########  #########  #########  #########  #########  ######### WRITE IN CPP
-  norm_ret = norm_variables(y,X,Z)
-  moments = norm_ret$moments; y = norm_ret$y; X = norm_ret$X; Z = norm_ret$Z;
-  # make X an appropriately sized matrix
+  moments <- normalize_train(y,X,Z)
 
   #check whether Z is univariate
   if( pz > 1 ) isuniv = FALSE else isuniv = TRUE
@@ -51,15 +53,15 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "Nadam"
   mySpline$trainbasis(Z,n_knots) #binary "spline" discards n_knots
 
   #Gaussian Process kernel (only SE implemented)
-  if (kernel = "Matern") {
+  if (kernel == "Matern") {
     #myKernel <- KernelClass_Matern$new(px = px,pz = pz)
-  } else if(kernel = "Polynomial") {
+  } else if(kernel == "Polynomial") {
     #myKernel <- KernelClass_Poly$new(px = px,pz = pz)
   } else {
     myKernel <- KernelClass_SE$new(px = px,pz = pz)
   }
 
-  #initialize Kernel parameters given the spline basis dimension (binary:2, ncs: n_knots+3)
+  #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
   myKernel$parainit(y,mySPline$dim)
 
   #initialize optimizer
