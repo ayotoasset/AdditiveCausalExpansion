@@ -5,7 +5,7 @@ binary_spline <- setRefClass("binary_spline",
                            dim = function(){
                              (ncol(B)+1); #basis plus nuisance term m()
                            },
-                           trainbasis = function(Z) {
+                           trainbasis = function(Z,n_knots) {
                              n <- length(Z)
 
                              #generate matrices without intercept!
