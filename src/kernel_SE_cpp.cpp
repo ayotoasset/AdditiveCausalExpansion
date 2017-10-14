@@ -5,10 +5,6 @@
 using namespace arma;
 using namespace Rcpp;
 
-double evid_grad(arma::mat& mymat, arma::mat& dK) {
-  return - 0.5 * trace( mymat * dK);
-}
-
 // [[Rcpp::export]]
 Rcpp::List kernmat_SE_cpp(const arma::mat& X1,const arma::mat& X2,const arma::mat& Z1,const arma::mat& Z2,
                           arma::vec lambda, arma::mat& L) {
@@ -57,8 +53,7 @@ arma::mat uppertri2symmat(arma::vec matvec,unsigned int dim){
   unsigned int cnt = 0;
   for(unsigned int r = 0; r < dim; r++ ){
     for(unsigned int c = r; c < dim; c++ ){
-      out(r,c) = matvec(cnt);
-      out(c,r) = matvec(cnt);
+      out(r,c) = out(c,r) = matvec(cnt);
       cnt++;
     }
   }
@@ -167,114 +162,71 @@ double mu_solution_cpp(arma::colvec& y, arma::mat& invKmat) {
 }
 
 ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// /////
-
-
-/*
-
- Rcpp::List evid_scale_gradients(arma::mat X, arma::mat tmpK,
- Rcpp::List K,
-Rcpp::List parameters){
-// produce a (p x 2) matrix "grad" with the gradients of Lm and La in the first and second column, respectively
-unsigned int n = X.n_rows;
-unsigned int p = X.n_cols;
-
-//predefine matrices and temporary storage files
-arma::vec grad_m(p);
-arma::vec grad_a(p);
-arma::mat tmpX(n,n);
-arma::mat tmpM(n,n);
-arma::mat tmpA(n,n);
-
-arma::mat L = para["L"]; // p x B
-arma::vec lambda = para["lambda"];
-
-for(unsigned int i=0; i<p; i++){
-//tmpX = abs(matrix(rep(X[,i],n),n,n) - t(matrix(rep(X[,i],n),n,n)))
-for(unsigned int r=0; r< n; r++){
-tmpX.col(r) = pow(X(r, i) - X.col(i),2);
+double evid_grad(arma::mat& Kaa, arma::mat& dK) {
+  return - 0.5 * arma::trace( Kaa * dK);
 }
 
-//Klist$Km * exp( 2*log(tmpX) - parameters$Lm[i] )
-// NEED TO REWRITE FOR MATRIX L
-tmpM = Km % tmpX * exp(- as<arma::vec>(L[b])[i]);
-//tmpA = Ka % tmpX * exp(- as<arma::vec>(parameters["La"])[i]);
+arma::mat evid_scale_gradients(arma::mat& X, arma::mat& Kaa, arma::cube& K, arma::mat L){
+  // produce a (p x B) matrix "grad" with the gradients of L
+  unsigned int n = X.n_rows;
+  unsigned int p = X.n_cols;
+  unsigned int B = L.n_cols;
+  arma::mat tmpX(n,n);
 
-grad_m(i) = evid_grad(tmpK,tmpM);
-//Rcpp::Rcout << grad_m(i) << std::endl;
-grad_a(i) = evid_grad(tmpK,tmpA);
+  for(unsigned int i=0; i < p; i++){
+    for(unsigned int r=0; r < n; r++){
+      tmpX.col(r) = pow(X(r, i) - X.col(i),2);
+    }
+    for(unsigned int b=0; b < B; b++){
+      // replace parameter with its gradient
+      L(i,b) = - 0.5 * arma::trace( Kaa * (K.slice(b) % tmpX) * exp( - L(i,b) ) );
+    }
+  }
+  return L;
 }
 
-return Rcpp::List::create(Named("m") = grad_m,Named("a") = grad_a );
-}
-
-
-*/
-
-/*
-// [[Rcpp::export]]
-Rcpp::List grad_GP_SE_cpp(arma::colvec y, arma::mat X, arma::colvec z,arma::colvec w, arma::mat Kmat, arma::mat Km, arma::mat Ka, arma::mat invKmatn, Rcpp::List parameters) {
-  Rcpp::List gradients = clone(parameters); //for the same list structure
+// reduced to only an output list due to specification of the optimizers
+Rcpp::List grad_GP_SE_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
+                          arma::mat& Kfull, arma::cube& K, arma::mat& invKmatn, arma::vec& eigenval,
+                          double sigma, double mu, arma::vec lambda, arma::mat L,
+                          arma::vec& stats) {
 
   unsigned int n = X.n_rows;
-  //unsigned int p = X.n_cols;
+  unsigned int p = X.n_cols;
+  unsigned int B = Z.n_cols;
 
-  //preallocate memory
-  arma::colvec stats(2);
   arma::colvec ybar(n);
   arma::colvec alpha(n);
   arma::mat tmpK(n,n);
-  arma::mat dK(n,n);
 
-  ybar = y - as<double>(parameters["mu"]); // - parameters["mu_z"]
+  ybar = y - mu;//as<double>(parameters["mu"]); // - parameters["mu_z"]
   alpha = invKmatn * ybar;
   tmpK = invKmatn - alpha * alpha.t();
 
   //sigma
-  dK = arma::diagmat( exp( as<double>(parameters["sigma"]) ) / w ); //+ as<double>(parameters["sigma_z"]) * z
-  gradients["sigma"] = evid_grad(tmpK, dK);
+  sigma = - 0.5 * arma::sum(tmpK.diag())* exp( sigma ); // thus avoid allocating dK
 
-  //sigma_z
-  //dK.diag() = dK.diag() % z;
-  //gradients["sigma_z"] = evid_grad(tmpK, dK);
+  //lambda
+  for(unsigned int b=0;b<B;b++){
+    lambda(b) = evid_grad(tmpK, K.slice(b));
+  }
 
-  //lambdam
-  gradients["lambdam"] = evid_grad(tmpK, Km);
-
-  //lambdaa
-  gradients["lambdaa"] = evid_grad(tmpK, Ka);
-
-  //Lm and La
-  Rcpp::List tmp = evid_scale_gradients(X, tmpK, Km, Ka, parameters);
-  //arma::vec tmp(2,fill::zeros);
-
-  gradients["Lm"] = as<std::vector<double> >(tmp["m"]);
-  gradients["La"] = as<std::vector<double> >(tmp["a"]);
+  //L
+  L = evid_scale_gradients(X, tmpK, K, L);
 
   //mu - gradient approach
+  mu=0; //arma::sum( invKmatn * ybar )
 
-  gradients["mu"] = arma::sum( invKmatn * ybar );
-
-  //mu_z?
-  //gradients["mu"] = z.t() * invKmatn * ybar ;
-
-  //Might remove stats but it is more efficient to calculate it here
-
+  //stats is returned as a reference
   //RMSE
-  stats(0) = pow(arma::norm(y - (Kmat * alpha + as<double>(parameters["mu"]))),2);
-
+  stats(0) = pow(arma::norm(ybar - (Kfull * alpha)),2);
   //Evidence
-  double val;
-  double sign;
-  arma::log_det(val,sign,invKmatn);  //logdet of INVERSE -> -val
-  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) - val + arma::dot( ybar, alpha ) ) ;
+  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + sum(log(eigenval)) + arma::dot( ybar, alpha ) ) ;
 
-  //output
-  return Rcpp::List::create(Named("gradients") = gradients,Named("stats") = stats );
+  //output gradients
+  return Rcpp::List::create(_("sigma") = sigma,
+                            _("lambda") = lambda,
+                            _("L") = L,
+                            _("mu") = mu);
 }
 
-
-
-
-
-
-*/

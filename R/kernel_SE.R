@@ -49,20 +49,19 @@ KernelClass_SE <- setRefClass("SqExpKernel",
 
                                      invKmatList
                                    },
-                                   para_update = function(iter,y,X,z,Optim) {
+                                   para_update = function(iter,y,X,Z,Optim) {
                                      #update Kmat and invKmat in the class environment
+                                     stats <- c(0,0)
 
-                                     invKmatList <- getinv_kernel(X,z);
+                                     invKmatList <- getinv_kernel(X,Z);
 
-                                     gradlist <- grad_SE_cpp(y,as.matrix(X),z,Kmat,Karray,invKmatList,parameters)
+                                     gradients <- grad_SE_cpp(y,as.matrix(X),as.matrix(Z),Kmat,Karray,invKmatList$inv,invKmatList$eigenval,
+                                                              parameters$sigma,parameters$mu,parameters$lambda,parameters$L,stats)
 
-                                     gradients = gradlist$gradients; stats = gradlist$stats
                                      parameters <<- Optim$update(iter,parameters,gradients)
                                      mean_solution(y,z) #overwrites mu gradient update
 
                                      if(iter%%100 == 0){ cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1])) }
-                                     #stats <- get_train_stats(y,X,z,invKmatList)
-                                     #stats
                                      iter
                                    },
                                    get_train_stats = function(y,X,z,invKmatList){
