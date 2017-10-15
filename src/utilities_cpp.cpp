@@ -16,7 +16,7 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
     isbinary(i) = (arma::sum(arma::pow(arma::unique( X.col(i) ),0)) == 2); // ugly
   }
   for(unsigned int i = px; i < (px+pz); i++){
-    isbinary(i) = (sum(pow(arma::unique( Z.col(i) ),0)) == 2); // ugly
+    isbinary(i) = (sum(pow(arma::unique( Z.col(i-px) ),0)) == 2); // ugly
   }
 
   //get mean and de-mean
@@ -24,34 +24,31 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
   y = y - moments(0,0);
   for(unsigned int i = 1; i < (px+1); i++){
     if(isbinary(i-1)==0){
-      moments(i,0) = mean(X.col(i));
-      X.col(i) = X.col(i) - moments(i,0);
+      moments(i,0) = mean(X.col(i-1));
+      X.col(i-1) = X.col(i-1) - moments(i,0);
     }
   }
   for(unsigned int i = px+1; i < (px+pz+1); i++){
     if(isbinary(i-1)==0){
-      moments(i,0) = mean(Z.col(i));
-      Z.col(i) = Z.col(i) - moments(i,0);
+      moments(i,0) = mean(Z.col(i-px-1));
+      Z.col(i-px-1) = Z.col(i-px-1) - moments(i,0);
     }
   }
-
   //rescale
   moments(0,1) = arma::stddev(y); // mean is a parameter
   y = y / moments(0,1);
   for(unsigned int i = 1; i < (px+1); i++){
     if(isbinary(i-1)==0){
-      moments(i,1) = arma::max(abs(X.col(i)));
-      X.col(i) = X.col(i) / moments(i,1);
+      moments(i,1) = arma::max(abs(X.col(i-1)));
+      X.col(i-1) = X.col(i-1) / moments(i,1);
     }
   }
   for(unsigned int i = px+1; i < (px+pz+1); i++){
     if(isbinary(i-1)==0){
-      moments(i,1) = arma::max(abs(Z.col(i)));
-      Z.col(i) = Z.col(i) / moments(i,1);
+      moments(i,1) = arma::max(abs(Z.col(i-px-1)));
+      Z.col(i-px-1) = Z.col(i-px-1) / moments(i,1);
     }
   }
-
-
   //return moments
   return moments;
 }
