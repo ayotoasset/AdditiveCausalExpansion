@@ -38,16 +38,16 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "Nadam"
   #check whether Z is univariate
   if( pz > 1 ) isuniv = FALSE else isuniv = TRUE
   #check whether Z is binary
-  if( (unique(c(Z)) > 2) ) {cat("Non-Binary Z detected"); isbinary = FALSE}
-  else {cat("Binary Z detected");isbinary = TRUE; spline = "binary"}
+  if( (length(unique(c(Z))) > 2) ) {cat("Non-Binary Z detected"); isbinary = FALSE}
+  else {cat("Binary Z detected\n"); isbinary = TRUE; spline = "binary"}
 
   #### select chosen spline or appropriate based on data ###
   if( isuniv && isbinary && (spline == "binary")) {
-    cat("Binary spline selected\n");  mySpline <- binary_spline$new()  }
+    cat("Using binary spline\n");  mySpline <- binary_spline$new()  }
   else if( isuniv && (spline == "B") ) {
-    cat("B-spline selected\n");  mySpline <- B_spline$new()  }
+    cat("Using B-spline\n"); mySpline <- B_spline$new()  }
   else if( isuniv ){
-    cat("NC-splineselected\n");   mySpline <- ns_spline$new()  }
+    cat("Using NC-spline\n"); mySpline <- ns_spline$new()  }
 
   #generate basis
   mySpline$trainbasis(Z,n_knots) #binary "spline" discards n_knots
@@ -58,11 +58,11 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "Nadam"
   } else if(kernel == "Polynomial") {
     #myKernel <- KernelClass_Poly$new(px = px,pz = pz)
   } else {
-    myKernel <- KernelClass_SE$new(px = px,pz = pz)
+    myKernel <- KernelClass_SE$new()
   }
 
   #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
-  myKernel$parainit(y,mySPline$dim)
+  myKernel$parainit(y,p=px,mySpline$dim())
 
   #initialize optimizer
   if((myoptim=="Adam") || (myoptim=="Nadam")){
@@ -103,3 +103,4 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "Nadam"
                  class = "GPspline")
 
 }
+

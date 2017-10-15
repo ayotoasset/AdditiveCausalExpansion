@@ -187,14 +187,18 @@ arma::mat evid_scale_gradients(arma::mat& X, arma::mat& Kaa, arma::cube& K, arma
 }
 
 // reduced to only an output list due to specification of the optimizers
+// [[Rcpp::export]]
 Rcpp::List grad_SE_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
                           arma::mat& Kfull, arma::cube& K, arma::mat& invKmatn, arma::vec& eigenval,
-                          double sigma, arma::vec lambda, arma::mat L, double mu,
+                          double sigma, arma::vec lambda, arma::mat& Lin, double mu,
                           arma::vec& stats) {
 
+
   unsigned int n = X.n_rows;
+  unsigned int px = X.n_cols;
   unsigned int B = Z.n_cols;
 
+  arma::mat L(px,B+1); L.fill(Lin);
   arma::colvec ybar(n);
   arma::colvec alpha(n);
   arma::mat tmpK(n,n);

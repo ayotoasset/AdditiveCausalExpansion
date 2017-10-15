@@ -3,9 +3,12 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                                invKmatn = "matrix", #training inverse of the Kernel matrix with noise
                                                Kmat = "matrix", #kernel matrix
                                                Karray = "array", #training Kernel matrices
-                                               B = "numeric"), #basis dimension
+                                               B = "numeric",
+                                               p = "numeric"), #basis dimension
                                  methods = list(
-                                   parainit = function(y,B) {
+                                   parainit = function(y,p,B) {
+                                     B <<- B
+                                     p <<- p
 
                                      #for momentum and adam
                                      parameters <<- list(sigma=log(var(y)),
@@ -16,12 +19,12 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    },
                                    kernel_mat = function(X1,X2,Z1,Z2) {
                                      #intended use for prediction
-                                     Klist <- kernmat_SE_cpp(X1,X2,Z1,Z2,parameters$lambda,parameters$L)
+                                     Klist <- kernmat_SE_cpp(X1,X2,Z1,Z2,parameters$lambda,matrix(parameters$L,p,B))
 
                                    },
-                                   kernel_mat_sym = function(X1,Z2) {
+                                   kernel_mat_sym = function(X,Z) {
                                      #intended use for the gradient step
-                                     Klist = kernmat_SE_sym_cpp(X,Z,parameters$lambda,parameters$L)
+                                     Klist = kernmat_SE_symmetric_cpp(X,Z,parameters$lambda,matrix(parameters$L,p,B))
                                      Kmat <<- Klist$full
                                      Karray <<- Klist$elements
                                    },
@@ -42,11 +45,14 @@ KernelClass_SE <- setRefClass("SqExpKernel",
 
                                      invKmatList <- getinv_kernel(X,Z);
 
-                                     gradients <- grad_SE_cpp(y,as.matrix(X),as.matrix(Z),Kmat,Karray,invKmatList$inv,invKmatList$eigenval,
-                                                              parameters$sigma,parameters$mu,parameters$lambda,parameters$L,stats)
+                                     gradients <- grad_SE_cpp(y,X,Z,Kmat,Karray,invKmatn,invKmatList$eigenval,
+                                                              parameters$sigma,parameters$lambda,
+                                                              matrix(parameters$L,p,B), # otherwise issues with p=1
+                                                              parameters$mu,
+                                                              stats)
 
                                      parameters <<- Optim$update(iter,parameters,gradients)
-                                     mean_solution(y,z) #overwrites mu gradient update
+                                     mean_solution(y) #overwrites mu gradient update
 
                                      if(iter%%100 == 0){ cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1])) }
                                      iter

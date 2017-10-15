@@ -9,7 +9,7 @@ binary_spline <- setRefClass("binary_spline",
                              n <- length(Z)
 
                              #generate matrices without intercept!
-                             B <<- as.matrix(Z,n,1)
+                             B <<- matrix(Z,n,1)
                              dB <<- matrix(1,n,1) # 0 -> 1
 
                              B
@@ -18,12 +18,12 @@ binary_spline <- setRefClass("binary_spline",
                              #get new basis matrices
                              if(!missing(Znew)){
                                n <- length(Znew)
-                               Bnew <- Znew
+                               Bnew <- matrix(Znew)
                                dBnew <- matrix(1,n,1) # 0 -> 1
                              } else {
                                #return stored matrices
-                               Bnew <- B
-                               dBnew <- dB
+                               Bnew <- matrix(B)
+                               dBnew <- matrix(dB)
                              }
                              list(B = Bnew, dB = dBnew)
                            }
