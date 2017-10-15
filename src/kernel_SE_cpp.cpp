@@ -286,11 +286,11 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, double sigma, double mu,
     return Rcpp::List::create(_("map") = y_x,
                               _("ci") = ci);
   } else {
-    double ate = mean(y_x);
+    double ate = arma::mean(y_x);
     arma::vec ate_ci(2);
 
     //eficient ci calculation
-    ate_ci(2) = sum(sum(Kmarg_xx))/pow(nx,2);
+    ate_ci(2) = arma::sum(arma::sum(Kmarg_xx))/pow(nx,2);
     ate_ci(1) = ate - ate_ci(2);
     ate_ci(2) = ate + ate_ci(2);
 
