@@ -30,6 +30,19 @@
 #' Y1 = rnorm(n, mean = y1_true, sd = 1)
 #' Y = Y0*(1-Z) + Y1*Z
 #' my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
+#'
+#'
+#' Z2 = rnorm(n, 0, 1)
+#' X1 = runif(sum(Z), min = 20, max = 40)
+#' X0 = runif(n-sum(Z), min = 20, max = 40)
+#' X = matrix(NaN,n,1)
+#' X[Z2>0,] = X1; X[Z2<0,] = X0
+#' y0_true = as.matrix(72 + 3 * sqrt(X))
+#' y1_true = as.matrix(90 + exp(0.06 * X))
+#' Y0 = rnorm(n, mean = y0_true, sd = 1)
+#' Y1 = rnorm(n, mean = y1_true, sd = 1)
+#' Y = Y0*(1-Z) + Y1*Z
+#' my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
 
 GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.01,beta1=0.9,beta2=0.999,momentum=0.0){
   if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
@@ -51,7 +64,7 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
   #check whether Z is univariate
   if( pz > 1 ) isuniv = FALSE else isuniv = TRUE
   #check whether Z is binary
-  if( (length(unique(c(Z))) > 2) ) {cat("Non-Binary Z detected"); isbinary = FALSE}
+  if( (length(unique(c(Z))) > 2) ) {cat("Non-Binary Z detected\n"); isbinary = FALSE}
   else {cat("Binary Z detected\n"); isbinary = TRUE; spline = "binary"}
 
   #### select chosen spline or appropriate based on data ###
@@ -99,7 +112,7 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
     stats[,iter+1] = myKernel$para_update(iter,y,X,mySpline$B,myOptimizer)
 
     change = abs(stats[2,iter+1] - stats[2,iter])
-    if((change < tol) && (iter > 3)){ cat( sprintf("Stopped: change smaller than tolerance after %d iterations",iter)); break; }
+    if((change < tol) && (iter > 3)){ cat( sprintf("Stopped: change smaller than tolerance after %d iterations\n",iter)); break; }
   }
 
   if(iter == maxiter) cat("Optimization stopped: maximum iterations reached\n")
@@ -110,7 +123,7 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
   graphics::plot(stats[2,3:(iter+2)],type="l",ylab="log Evidence",xlab="Iteration")
   graphics::plot(stats[1,3:(iter+2)],type="l",ylab="training RMSE",xlab="Iteration")
 
-  structure(list(Kernel = myKernel, spline=mySpline,
+  structure(list(Kernel = myKernel, Spline=mySpline,
                  moments=moments,
                  train_data=list(y = y,X = X,Z = Z)),
                  class = "GPspline")

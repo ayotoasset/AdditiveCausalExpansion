@@ -37,6 +37,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      Klist = kernmat_SE_symmetric_cpp(X,Z,parameters)
                                      Kmat <<- Klist$full
                                      Karray <<- Klist$elements
+                                     Klist
                                    },
                                    getinv_kernel = function(X,Z) {
                                      #get matrices and return inverse for prediction
@@ -76,13 +77,13 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      #using analytic solution
                                      parameters[2] <<- mu_solution_cpp(y, invKmatn)
                                    },
-                                   predict = function(y,X,Z,X2,Z2){
+                                   predict = function(y,X,Z,X2,Z2,mean_y,var_y){
                                      n2 = nrow(X2)
 
                                      K_xX = kernel_mat(X2,X,Z2,Z)$full
                                      K_xx = kernel_mat_sym(X2,Z2)$full
 
-                                     outlist <- pred_cpp(y, parameters[1],parameters[2],invKmatn, K_xX, K_xx)
+                                     outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx,mean_y,var_y)
                                    },
                                    predict_treat = function(y,X,Z,X2,dZ2,isbinary){
 
@@ -92,11 +93,10 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      Kmarginal_xX = kernel_mat(X2,X,dZ2,Z)$elements
                                      Kmarginal_xx = kernel_mat_sym(X2,dZ2)$elements
 
-                                     outlist <- pred_cpp(y,
-                                                         parameters[1],parameters[2],
+                                     outlist <- pred_cpp(y,parameters[1],parameters[2],
                                                          invKmatn,
                                                          Kmarginal_xX, Kmarginal_xx,
-                                                         isbinary)
+                                                         mean_y,var_y,isbinary)
                                    }
                                  )
 )

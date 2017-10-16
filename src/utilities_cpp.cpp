@@ -55,11 +55,11 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
 
 
 // [[Rcpp::export]]
-void normalize_test(arma::vec& y, arma::mat& X, arma::mat& Z, const arma::mat& moments) {
+void normalize_test(arma::mat& X, arma::mat& Z, const arma::mat& moments) {
   unsigned int px = X.n_cols;
   unsigned int pz = Z.n_cols;
 
-  y = (y - moments(0,0)) / moments(0,1);
+  //y = (y - moments(0,0)) / moments(0,1);
   for(unsigned int i = 0 ; i < px; i++){
     X.col(i) = (X.col(i) - moments(i+1,0)) / moments(i+1,1);
   }

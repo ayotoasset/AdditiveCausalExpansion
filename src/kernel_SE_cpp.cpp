@@ -155,7 +155,9 @@ arma::mat evid_scale_gradients(const arma::mat& X, const arma::mat& Kaa, const a
     for(unsigned int b=0; b < B; b++){
       // replace parameter with its gradient
       L[b + B*i] = - 0.5 * arma::trace( Kaa * (K.slice(b) % tmpX) * exp( - L[b + B*i] ) );
+      //std::cout << "b: " << b << " | i:" << i << " | L: " << L[b + B*i] <<  std::endl;
     }
+
   }
   return L;
 }
@@ -223,14 +225,16 @@ arma::rowvec stats_SE_cpp(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, 
   //RMSE
   stats(0) = pow(arma::norm(y - (Kmat * alpha)),2);
   //Evidence
-  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + sum(log(eigenval)) + arma::dot( y, alpha ) ) ;
+  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) - sum(log(eigenval)) + arma::dot( y, alpha ) ) ;
 
   return stats;
 }
 
 ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// credible intervals
-
-Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma,const double mu,const arma::mat& invK_XX, arma::mat& K_xX,arma::mat K_xx){
+// [[Rcpp::export]]
+Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
+                    const arma::mat& invK_XX, arma::mat& K_xX,arma::mat K_xx,
+                    double mean_y, double var_y){
   unsigned int nx = K_xx.n_rows;
   unsigned int nX = invK_XX.n_rows;
 
@@ -240,21 +244,24 @@ Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma,const double mu,con
 
   tmp = K_xX * invK_XX;
   y_x = tmp * (y_X - mu) + mu;
+  y_x = mean_y + sqrt(var_y) * y_x;
 
   K_xx = K_xx - tmp * K_xX.t();
   K_xx.diag() += exp(sigma);
 
-  ci.col(2) = 1.96 * sqrt(K_xx.diag());
-  ci.col(1) = y_x + ci.col(2);
-  ci.col(1) = y_x - ci.col(2);
+  ci.col(1) = sqrt(var_y)*1.96 * sqrt(K_xx.diag());
+  ci.col(0) = y_x - ci.col(1);
+  ci.col(1) = y_x + ci.col(1);
 
   return Rcpp::List::create(_("map") = y_x,
                             _("ci") = ci);
 }
 
+// [[Rcpp::export]]
 Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const double mu,
                              const arma::mat& invK_XX,
                              const arma::cube& K_xX, const arma::cube& K_xx,
+                             const double& mean_y, const double& var_y,
                              bool isbinary){ // cube argins for x-kernel matrices
   unsigned int nx = K_xx.slice(0).n_rows;
   unsigned int nX = invK_XX.n_rows;
@@ -273,13 +280,15 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
 
   tmp = Kmarg_xX * invK_XX;
   y_x = tmp * (y_X - mu) + mu;
+  y_x = mean_y + sqrt(var_y) * y_x;
 
   Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t();
   Kmarg_xx.diag() += exp(sigma);
 
-  ci.col(2) = 1.96 * sqrt(Kmarg_xx.diag());
+  ci.col(2) = sqrt(var_y)*1.96 * sqrt(Kmarg_xx.diag());
   ci.col(1) = y_x - ci.col(2);
   ci.col(2) = y_x + ci.col(2);
+
   if(!isbinary){
     return Rcpp::List::create(_("map") = y_x,
                               _("ci") = ci);
@@ -288,9 +297,9 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
     arma::vec ate_ci(2);
 
     //eficient ci calculation
-    ate_ci(2) = arma::sum(arma::sum(Kmarg_xx))/pow(nx,2);
-    ate_ci(1) = ate - ate_ci(2);
-    ate_ci(2) = ate + ate_ci(2);
+    ate_ci(2) = sqrt(var_y*arma::sum(arma::sum(Kmarg_xx))/pow(nx,2));
+    ate_ci(1) = ate - 1.96*ate_ci(2);
+    ate_ci(2) = ate + 1.96*ate_ci(2);
 
     return Rcpp::List::create(_("map") = y_x,
                               _("ci") = ci,

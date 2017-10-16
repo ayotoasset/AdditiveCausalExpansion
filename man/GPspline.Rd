@@ -57,4 +57,17 @@ Y0 = rnorm(n, mean = y0_true, sd = 1)
 Y1 = rnorm(n, mean = y1_true, sd = 1)
 Y = Y0*(1-Z) + Y1*Z
 my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
+
+
+Z2 = rnorm(n, 0, 1)
+X1 = runif(sum(Z), min = 20, max = 40)
+X0 = runif(n-sum(Z), min = 20, max = 40)
+X = matrix(NaN,n,1)
+X[Z2>0,] = X1; X[Z2<0,] = X0
+y0_true = as.matrix(72 + 3 * sqrt(X))
+y1_true = as.matrix(90 + exp(0.06 * X))
+Y0 = rnorm(n, mean = y0_true, sd = 1)
+Y1 = rnorm(n, mean = y1_true, sd = 1)
+Y = Y0*(1-Z) + Y1*Z
+my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
 }

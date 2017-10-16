@@ -1,7 +1,7 @@
 Package: GPspline
 Type: Package
-Title: GPspline functional prediction
-Version: 0.1.0
+Title: GPspline: Varying-coefficients spline model with GP-priors
+Version: 0.1.1
 Author@R: person(Philip,Pilgerstorfer,email = "philip@pilgerstorfer.org", role = c("aut, "cre))
 Maintainer: Philip Pilgerstorfer <philip@pilgerstorfer.org>
 Description: Package for a varying-coefficients spline regression with GP-regularization of the spline coefficients using a separate set of covariates
