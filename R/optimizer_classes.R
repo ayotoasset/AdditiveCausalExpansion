@@ -1,68 +1,49 @@
-list2zero <- function(mylist){
-  tmplist = within(utils::stack(mylist), values <- 0.0)
-
-  if(nrow(tmplist) == nlevels(tmplist[,2])){
-    zerolist <- as.list(rep(0.0,nrow(tmplist)))
-    zerolist = stats::setNames(zerolist,tmplist[,"ind"])
-  } else {
-    zerolist = utils::unstack(tmplist)
-  }
-  zerolist
-}
 
 ## define optimizer classes
 optAdam <- setRefClass("AdamOpt",
-                       fields = list(m = "list",
-                                     v = "list",
+                       fields = list(m = "vector",
+                                     v = "vector",
                                      lr = "numeric",
                                      beta1 = "numeric",
                                      beta2 = "numeric"),
                        methods = list(
                          update = function(iter,parameters,gradients) {
-
-                           mylist = Adam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)
-
-                           m <<- mylist[[1]]
-                           v <<- mylist[[2]]
-                           mylist[[3]]
+                           if(Adam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA.") }
+                           parameters
                          },
                          initOpt = function(KernelObj){
-
-                           m <<- list2zero(KernelObj$parameters)
-                           v <<- list2zero(KernelObj$parameters)
+                           m <<- KernelObj$parameters*0
+                           v <<- KernelObj$parameters*0
                          })
 )
 
 optNadam <- setRefClass("NadamOpt",
-                        fields = list(m = "list",
-                                      v = "list",
+                        fields = list(m = "vector",
+                                      v = "vector",
                                       lr = "numeric",
                                       beta1 = "numeric",
                                       beta2 = "numeric"),
                         methods = list(
                           update = function(iter,parameters,gradients) {
-                            mylist = Nadam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)
-                            m <<- mylist[[1]];
-                            v <<- mylist[[2]]
-                            mylist[[3]]
+                            if(Nadam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA.") }
+                            parameters
                           },
                           initOpt = function(KernelObj){
-                            m <<- list2zero(KernelObj$parameters)
-                            v <<- list2zero(KernelObj$parameters)
+                            m <<- KernelObj$parameters*0
+                            v <<- KernelObj$parameters*0
                           })
 )
 
 optNestorov <- setRefClass("NesterovOpt",
-                           fields = list(nu = "list",
+                           fields = list(nu = "vector",
                                          lr = "numeric",
                                          momentum = "numeric"),
                            methods = list(
                              update = function(iter,parameters,gradients) {
-                               mylist = Nesterov_cpp(lr,momentum,nu,gradients,parameters)
-                               nu <<- mylist[[1]]
-                               mylist[[2]]
+                               if(Nesterov_cpp(lr,momentum,nu,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA.") }
+                               parameters
                              },
                              initOpt = function(KernelObj){
-                               nu <<- list2zero(KernelObj$parameters)
+                               nu <<- KernelObj$parameters*0; #same structure
                              })
 )

@@ -7,57 +7,43 @@ using namespace Rcpp;
 //using namespace Rcpp;
 
 // [[Rcpp::export]]
-Rcpp::List Nesterov_cpp(double learn_rate,double momentum, Rcpp::List nu, Rcpp::List grad, Rcpp::List para){
+bool Nesterov_cpp(double learn_rate, double momentum, arma::vec& nu, arma::vec grad, arma::vec& para){
 
-  unsigned int no_L = nu.size(); //excludes means
-  Rcpp::List output_nu = clone(nu);
-  Rcpp::List output_para = clone(para);
-  //Rcpp::NumericVector tmp;
+  bool output_flag = arma::is_finite(grad); // if all gradients finite
 
-  //for each vector in the list
-  for(unsigned int i=0; i < no_L; i++){
-    output_nu[i] = momentum * as<NumericVector>(nu[i]) + learn_rate * as<NumericVector>(grad[i]);
-    output_para[i] = as<NumericVector>(para[i]) + as<NumericVector>(nu[i]);
-  }
+  if(output_flag==false){
+    std::cout << "Element that is not finite: " << find_nonfinite(grad) << std::endl;
+    grad.elem( find_nonfinite(grad) ).zeros();}
 
-  //Output
-  Rcpp::List out; out["nu"]=output_nu; out["parameters"] = output_para;
-  return(out);
+  nu = momentum * nu + learn_rate * grad;
+  para = para + nu;
+
+  return output_flag;
+  //return para;
 }
 
 // [[Rcpp::export]]
-Rcpp::List Nadam_cpp(double iter,double learn_rate,double beta1, double beta2, double eps, Rcpp::List m, Rcpp::List v, Rcpp::List grad, Rcpp::List para){
-  //number of list elements
-  unsigned int no_L = m.size() ; //excludes means
-  //Rcpp::List grad = clone(gradin);
-  Rcpp::List output_m = clone(m);
-  Rcpp::List output_v = clone(v);
-  Rcpp::List output_para = clone(para);
+bool Nadam_cpp(double iter,double learn_rate,double beta1, double beta2, double eps, arma::vec& m, arma::vec& v, const arma::vec& grad, arma::vec& para){
 
-  //for each vector in the list
-  for(unsigned int i=0; i < no_L; i++){
-    output_m[i] = (beta1 * as<Rcpp::NumericVector>(m[i]) + (1-beta1) * as<Rcpp::NumericVector>(grad[i]));
-    output_v[i] = (beta2 * as<Rcpp::NumericVector>(v[i]) + (1-beta2) * Rcpp::pow(as<Rcpp::NumericVector>(grad[i]),2));
-    output_para[i] = as<Rcpp::NumericVector>(para[i]) + learn_rate * ( ( beta1 * (as<Rcpp::NumericVector>(output_m[i]))  + (1-beta1)*(as<Rcpp::NumericVector>(grad[i])) ) / (1-pow(beta1,iter)) ) / ( sqrt(as<Rcpp::NumericVector>(output_v[i]) / (1-pow(beta2,iter)) ) + eps);
-  }
-  return Rcpp::List::create(Named("m") = output_m, Named("v") = output_v,Named("parameters") = output_para );
+  bool output_flag = arma::is_finite(grad);
+
+  //use references to update
+  m = (beta1 * m) + (1-beta1) * grad;
+  v = beta2 * v + (1-beta2) * arma::pow(grad,2);
+  para = para + learn_rate * ( ( beta1 * m  + (1-beta1)*grad ) / (1-pow(beta1,iter)) ) / ( sqrt(v / (1-pow(beta2,iter)) ) + eps);
+
+  return output_flag;
 }
 
 // [[Rcpp::export]]
-Rcpp::List Adam_cpp(double iter,double learn_rate,double beta1, double beta2, double eps, Rcpp::List m, Rcpp::List v, Rcpp::List grad, Rcpp::List para){
-  //number of list elements
-  unsigned int no_L = m.size() ; //excludes means
-  //Rcpp::List grad = clone(gradin);
-  Rcpp::List output_m = clone(m);
-  Rcpp::List output_v = clone(v);
-  Rcpp::List output_para = clone(para);
+bool Adam_cpp(double iter,double learn_rate,double beta1, double beta2, double eps, arma::vec& m, arma::vec& v, const arma::vec& grad, arma::vec& para){
 
-  //for each vector in the list
-  for(unsigned int i=0; i < no_L; i++){
-    output_m[i] = (beta1 * as<Rcpp::NumericVector>(m[i]) + (1-beta1) * as<Rcpp::NumericVector>(grad[i]));
-    output_v[i] = (beta2 * as<Rcpp::NumericVector>(v[i]) + (1-beta2) * Rcpp::pow(as<Rcpp::NumericVector>(grad[i]),2));
-    output_para[i] = as<Rcpp::NumericVector>(para[i]) + learn_rate * ( (as<Rcpp::NumericVector>(output_m[i]))  / (1-pow(beta1,iter)) ) / ( sqrt(as<Rcpp::NumericVector>(output_v[i]) / (1-pow(beta2,iter)) ) + eps);
+  bool output_flag = arma::is_finite(grad);
 
-  }
-  return Rcpp::List::create(Named("m") = output_m, Named("v") = output_v,Named("parameters") = output_para );
+  //use references to update
+  m = (beta1 * m) + (1-beta1) * grad;
+  v = beta2 * v + (1-beta2) * arma::pow(grad,2);
+  para = para + learn_rate * ( m  / (1-pow(beta1,iter)) ) / ( sqrt(v / (1-pow(beta2,iter)) ) + eps);
+
+  return output_flag;
 }
