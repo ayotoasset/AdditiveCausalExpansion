@@ -62,9 +62,9 @@ my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
 n2 = 200
 X2 = matrix(runif(n2, min = 1, max = 2))
 Z2 = rnorm(n2, exp(X2)-14, 1)
-y2_true = as.matrix(72 + 3 * sqrt(X2) * Z2)
+y2_true = as.matrix(72 + 3 * sqrt(X2) * Z2^2)
 Y2 = rnorm(n2, mean = y2_true, sd = 1)
 my.GPS <- GPspline(Y2,X2,Z2,myoptim="Nadam",spline="linear")
-my.pred <- GPspline(my.GPS)
+my.pred <- predict(my.GPS)
 plot(Y2,my.pred$map)
 }
