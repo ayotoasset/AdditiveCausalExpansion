@@ -1,7 +1,7 @@
 plot.GPspline <- function(){
 
-  #ggplot() ?????
-  #plot() to reduce dependencies
+  #ggplot() ????? for 3D graph
+  #plot() to reduce dependencies? trycatch(ggplot2)?
 
 
   #3d with formula: name-based?
