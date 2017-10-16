@@ -1,4 +1,4 @@
-binary_spline <- setRefClass("binary_spline",
+linear_spline <- setRefClass("linear_spline",
                          fields = list(B = "matrix",   #design matrix
                                        dB = "matrix"), #derivative off design matrix
                          methods = list(
@@ -27,7 +27,5 @@ binary_spline <- setRefClass("binary_spline",
                              }
                              list(B = Bnew, dB = dBnew)
                            }
-
-
                          )
 )

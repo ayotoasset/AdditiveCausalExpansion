@@ -12,7 +12,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
 
                                      parameters <<- matrix(c(log(1), #sigma
                                                       mean(y), #mu
-                                                      log(runif(B,min=0.2,max=1)),
+                                                      log(seq(B,1)),
                                                       rep(0.1,(p) * B) # lambda and L
                                                       ))
                                      # [ 1 | 1 | B | B | B | B ]
@@ -85,7 +85,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
 
                                      outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx,mean_y,var_y)
                                    },
-                                   predict_treat = function(y,X,Z,X2,dZ2,isbinary){
+                                   predict_treat = function(y,X,Z,X2,dZ2,mean_y,var_y,isbinary){
 
                                      n = length(y);
                                      n2 = nrow(X2)
@@ -93,10 +93,10 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      Kmarginal_xX = kernel_mat(X2,X,dZ2,Z)$elements
                                      Kmarginal_xx = kernel_mat_sym(X2,dZ2)$elements
 
-                                     outlist <- pred_cpp(y,parameters[1],parameters[2],
-                                                         invKmatn,
-                                                         Kmarginal_xX, Kmarginal_xx,
-                                                         mean_y,var_y,isbinary)
+                                     outlist <- pred_marginal_cpp(y,parameters[1],parameters[2],
+                                                                  invKmatn,
+                                                                  Kmarginal_xX, Kmarginal_xx,
+                                                                  mean_y,var_y,isbinary)
                                    }
                                  )
 )

@@ -22,7 +22,7 @@ B_spline <- setRefClass("B_spline",
                                                        intercept = FALSE)
                                   B
                                 },
-                                getbasis = function(Znew){
+                                testbasis = function(Znew){
                                   #get new basis matrices
                                   if(!missing(Znew)){
                                     Bnew <- splines2::predict.bSpline2(B,ewx=Znew)

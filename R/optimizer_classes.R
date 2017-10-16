@@ -8,7 +8,7 @@ optAdam <- setRefClass("AdamOpt",
                                      beta2 = "numeric"),
                        methods = list(
                          update = function(iter,parameters,gradients) {
-                           if(Adam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA.") }
+                           if(Adam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
                            parameters
                          },
                          initOpt = function(KernelObj){
@@ -25,7 +25,7 @@ optNadam <- setRefClass("NadamOpt",
                                       beta2 = "numeric"),
                         methods = list(
                           update = function(iter,parameters,gradients) {
-                            if(Nadam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA.") }
+                            if(Nadam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
                             parameters
                           },
                           initOpt = function(KernelObj){
@@ -34,13 +34,13 @@ optNadam <- setRefClass("NadamOpt",
                           })
 )
 
-optNestorov <- setRefClass("NesterovOpt",
+optNesterov <- setRefClass("NesterovOpt",
                            fields = list(nu = "vector",
                                          lr = "numeric",
                                          momentum = "numeric"),
                            methods = list(
                              update = function(iter,parameters,gradients) {
-                               if(Nesterov_cpp(lr,momentum,nu,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA.") }
+                               if(Nesterov_cpp(lr,momentum,nu,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
                                parameters
                              },
                              initOpt = function(KernelObj){

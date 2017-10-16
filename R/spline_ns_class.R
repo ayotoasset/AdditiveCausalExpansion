@@ -18,7 +18,7 @@ ns_spline <- setRefClass("ns_spline",
 
                             B
                           },
-                          getbasis = function(Znew){
+                          testbasis = function(Znew){
                             #get new basis matrices
                             if(!missing(Znew)){
                               Bnew <- ncs_basis(Znew,myknots)

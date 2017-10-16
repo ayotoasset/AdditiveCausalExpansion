@@ -31,25 +31,23 @@
 #' Y = Y0*(1-Z) + Y1*Z
 #' my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
 #'
-#'
-#' Z2 = rnorm(n, 0, 1)
-#' X1 = runif(sum(Z), min = 20, max = 40)
-#' X0 = runif(n-sum(Z), min = 20, max = 40)
-#' X = matrix(NaN,n,1)
-#' X[Z2>0,] = X1; X[Z2<0,] = X0
-#' y0_true = as.matrix(72 + 3 * sqrt(X))
-#' y1_true = as.matrix(90 + exp(0.06 * X))
-#' Y0 = rnorm(n, mean = y0_true, sd = 1)
-#' Y1 = rnorm(n, mean = y1_true, sd = 1)
-#' Y = Y0*(1-Z) + Y1*Z
-#' my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
+#' #continuous Z
+#' n2 = 200
+#' X2 = matrix(runif(n2, min = 1, max = 2))
+#' Z2 = rnorm(n2, exp(X2)-14, 1)
+#' y2_true = as.matrix(72 + 3 * sqrt(X2) * Z2)
+#' Y2 = rnorm(n2, mean = y2_true, sd = 1)
+#' my.GPS <- GPspline(Y2,X2,Z2,myoptim="Nadam",spline="linear")
+#' my.pred <- GPspline(my.GPS)
+#' plot(Y2,my.pred$map)
 
 GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.01,beta1=0.9,beta2=0.999,momentum=0.0){
   if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
-  n = length(y); px = ncol(X);
+  n <- length(y); px <- ncol(X);
+  y <- matrix(y);
 
-  if((class(Z) == "matrix") || (class(Z)== "data.frame")) { pz = ncol(Z); }
-  else if(length(c(Z))==n ){ pz=1; }
+  if((class(Z) == "matrix") || (class(Z)== "data.frame")) { pz <- ncol(Z); }
+  else if(length(c(Z))==n ) { pz <- 1; }
   else { stop("Dimension/filetype of Z invalid.\n") }
 
   X <- as.matrix(as.numeric(X))
@@ -68,8 +66,8 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
   else {cat("Binary Z detected\n"); isbinary = TRUE; spline = "binary"}
 
   #### select chosen spline or appropriate based on data ###
-  if( isuniv && isbinary && (spline == "binary")) {
-    cat("Using binary spline\n");  mySpline <- binary_spline$new()  }
+  if( isuniv && ((isbinary && (spline == "binary")) || (spline=="linear"))) {
+    cat("Using binary/linear spline\n");  mySpline <- linear_spline$new()  }
   else if( isuniv && (spline == "B") ) {
     cat("Using B-spline\n"); mySpline <- B_spline$new()  }
   else if( isuniv ){
@@ -99,7 +97,7 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
     }
   } else if(myoptim=="GD" || myoptim=="Nesterov"){
     if(myoptim=="GD"){ momentum=0.0 }
-    myOptimizer = optNestorov$new(lr = learning_rate, momentum = momentum)
+    myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum)
   }
 
   #set optimization variables
