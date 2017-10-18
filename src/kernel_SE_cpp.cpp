@@ -38,6 +38,7 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,const arma::mat& X2,const arma::ma
       for(unsigned int c = 0; c < n2; c++){
         if (Z2(c,b-1)==0 ) {tmpX(r,c,b)=0; continue;}
         tmpX(r,c,b) = exp(parameters[2+b] - tmpX(r,c,b)) * Z1(r,b-1) * Z2(c,b-1); //lambda[b]
+        //tmpX(r,c,b) = exp(parameters[2+b] - tmpX(r,c,b) - pow(Z1(r,b-1) - Z2(c,b-1),2) ); // replace each element of tmpX
       }
     }
     Kfull += tmpX.slice(b);
@@ -95,6 +96,7 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X, const arma::mat& Z, cons
         continue; }
       for(unsigned int c = r; c < n; c++){
         tmpX(cnt,b) = exp(parameters[2+b] - tmpX(cnt,b) ) * Z(r,b-1) * Z(c,b-1); // replace each element of tmpX
+        //tmpX(cnt,b) = exp(parameters[2+b] - tmpX(cnt,b) - pow(Z(r,b-1) - Z(c,b-1),2) ); // replace each element of tmpX
         cnt++;
       }
     }
@@ -272,20 +274,19 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
   arma::mat tmp(nx,nX);
 
   arma::mat Kmarg_xx(nx,nx); Kmarg_xx = K_xx.slice(1);
-  arma::mat Kmarg_xX(nx,nx); Kmarg_xx = K_xX.slice(1);
+  arma::mat Kmarg_xX(nx,nX); Kmarg_xX = K_xX.slice(1);
   for(unsigned int b=2; b < B; b++){ // not the "constant" nuisance term and b=1
     Kmarg_xx += K_xx.slice(b); //cumsum only for matrices
     Kmarg_xX += K_xX.slice(b);
   }
 
   tmp = Kmarg_xX * invK_XX;
-  y_x = tmp * (y_X - mu) + mu;
-  y_x = mean_y + std_y * y_x;
+  y_x = tmp * (y_X - mu);
+  y_x = std_y * y_x;
 
   Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t();
-  Kmarg_xx.diag() += exp(sigma);
 
-  ci.col(1) = std_y*1.96 * sqrt(Kmarg_xx.diag());
+  ci.col(1) = std_y * 1.96 * sqrt(Kmarg_xx.diag());
   ci.col(0) = y_x - ci.col(1);
   ci.col(1) = y_x + ci.col(1);
 
