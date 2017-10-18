@@ -7,7 +7,7 @@
 #' @param spline A string (default: "ns" natural cubic spline for continuous or discrete Z and "binary" if Z is binary (factor)
 #' @param n.knots An integer denoting the  umber of internal knots of the spline of Z
 #' @param myoptim A string (default: "GD" gradient descent). Other options are "Nesterov" (accelerated gradient/momentum), "Adam", and "Nadam" (Nesterov-Adam).
-#' @param maxiter (default: 5000) Maximum number of iterations of the empirical Bayes optimization
+#' @param maxiter  (default: 5000) Maximum number of iterations of the empirical Bayes optimization
 #' @param tol (default: 1e-4) Stopping tolerance for the empirical Bayes optimization
 #' @param learning_rate (default: 0.01) Learning rate for the empirical Bayes optimization
 #' @param beta1 (default: 0.9) Learning parameter ("first moment") for the empirical Bayes optimization when using Adam or Nadam optimizers
@@ -24,6 +24,7 @@
 #' X0 = runif(n-sum(Z), min = 20, max = 40)
 #' X = matrix(NaN,n,1)
 #' X[Z==1,] = X1; X[Z==0,] = X0
+#' sort.idx = sort(X,index.return=TRUE)$ix
 #' y0_true = as.matrix(72 + 3 * sqrt(X))
 #' y1_true = as.matrix(90 + exp(0.06 * X))
 #' Y0 = rnorm(n, mean = y0_true, sd = 1)
@@ -35,9 +36,10 @@
 #' n2 = 200
 #' X2 = matrix(runif(n2, min = 1, max = 2))
 #' Z2 = rnorm(n2, exp(X2)-14, 1)
-#' y2_true = as.matrix(72 + 3 * sqrt(X2) * Z2^2)
+#' y2_true = as.matrix(72 + 3 * sqrt(X2) * ((Z2+8)^2 - 2*Z2))
+#' margy2_true = as.matrix(3 * sqrt(X2) * (2*(Z2+8) - 2))
 #' Y2 = rnorm(n2, mean = y2_true, sd = 1)
-#' my.GPS <- GPspline(Y2,X2,Z2,myoptim="Nadam",spline="linear")
+#' my.GPS <- GPspline(Y2,X2,Z2,myoptim="Nadam",spline="B",n.knots=1)
 #' my.pred <- predict(my.GPS)
 #' plot(Y2,my.pred$map)
 
@@ -70,6 +72,8 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
     cat("Using binary/linear spline\n");  mySpline <- linear_spline$new()  }
   else if( isuniv && (spline == "B") ) {
     cat("Using B-spline\n"); mySpline <- B_spline$new()  }
+  else if( isuniv && (spline == "square") ) {
+    cat("Using square-spline\n"); mySpline <- square_spline$new()   }
   else if( isuniv ){
     cat("Using NC-spline\n"); mySpline <- ns_spline$new()  }
 
@@ -120,11 +124,11 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
   graphics::par(mfrow=c(1,2))
   graphics::plot(stats[2,3:(iter+2)],type="l",ylab="log Evidence",xlab="Iteration")
   graphics::plot(stats[1,3:(iter+2)],type="l",ylab="training RMSE",xlab="Iteration")
+  graphics::par(mfrow=c(1,1))
 
   structure(list(Kernel = myKernel, Spline=mySpline,
                  moments=moments,
                  train_data=list(y = y,X = X,Z = Z)),
                  class = "GPspline")
-
 }
 
