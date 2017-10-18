@@ -48,6 +48,7 @@
 #' my.GPS <- GPspline(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 #' my.pred <- predict(my.GPS)
 #' plot(Y2,my.pred$map); abline(0,1,lty=2)
+#' plot(my.GPS,marginal=TRUE)
 
 GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.001,beta1=0.9,beta2=0.999,momentum=0.0){
   if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")

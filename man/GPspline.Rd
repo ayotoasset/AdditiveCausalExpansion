@@ -75,4 +75,5 @@ Y2 = rnorm(n2, mean = y2_true, sd = 1)
 my.GPS <- GPspline(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 my.pred <- predict(my.GPS)
 plot(Y2,my.pred$map); abline(0,1,lty=2)
+plot(my.GPS,marginal=TRUE)
 }
