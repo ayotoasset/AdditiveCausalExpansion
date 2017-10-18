@@ -3,7 +3,7 @@
 
 It can be installed using (requires appropriate c++ compilers, see the documentation of ```Rcpp```):
 ```
-install.packages("https://github.com/mazphilip/GPspline/raw/master/builds/GPspline_0.1.2.tar.gz", repos = NULL, type = "source")
+install.packages("https://github.com/mazphilip/GPspline/raw/master/builds/GPspline_0.1.3.tar.gz", repos = NULL, type = "source")
 ```
 
 The intended use case is a (for now) single dimensional set of continuous variable(s) Z whose marginal (predictive/causal) effect we are interested. The other set, the control variables X or "confounders" for causal inference, are used to make the function approximation more accurate and for the causal effects control for confounding. Using Gaussian processes, we can use differentiable spline bases to obtain the marginal effect.

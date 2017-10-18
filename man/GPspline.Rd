@@ -5,7 +5,7 @@
 \title{Fit a spline model with Gaussian process coefficients}
 \usage{
 GPspline(y, X, Z, kernel = "SE", spline = "ns", n.knots = 1,
-  myoptim = "GD", maxiter = 1000, tol = 1e-04, learning_rate = 0.01,
+  myoptim = "GD", maxiter = 1000, tol = 1e-04, learning_rate = 0.001,
   beta1 = 0.9, beta2 = 0.999, momentum = 0)
 }
 \arguments{
@@ -27,7 +27,7 @@ GPspline(y, X, Z, kernel = "SE", spline = "ns", n.knots = 1,
 
 \item{tol}{(default: 1e-4) Stopping tolerance for the empirical Bayes optimization}
 
-\item{learning_rate}{(default: 0.01) Learning rate for the empirical Bayes optimization}
+\item{learning_rate}{(default: 0.001) Learning rate for the empirical Bayes optimization}
 
 \item{beta1}{(default: 0.9) Learning parameter ("first moment") for the empirical Bayes optimization when using Adam or Nadam optimizers}
 
@@ -45,6 +45,7 @@ Fit a spline model with Gaussian process coefficients
 \examples{
 #Example replicating CausalStump with binary uni-variate Z
 #Generate data
+set.seed(1231)
 n = 120
 Z = rbinom(n, 1, 0.3)
 X1 = runif(sum(Z), min = 20, max = 40)
@@ -58,15 +59,20 @@ Y0 = rnorm(n, mean = y0_true, sd = 1)
 Y1 = rnorm(n, mean = y1_true, sd = 1)
 Y = Y0*(1-Z) + Y1*Z
 my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
+#print (sample) average treatment effect (ATE)
+predict(my.GPS,marginal=TRUE,causal=TRUE)$ate_map
+#true ATE
+mean(y1_true-y0_true)
 
 #continuous Z
-n2 = 200
+set.seed(1234)
+n2 = 300
 X2 = matrix(runif(n2, min = 1, max = 2))
 Z2 = rnorm(n2, exp(X2)-14, 1)
 y2_true = as.matrix(72 + 3 * sqrt(X2) * ((Z2+8)^2 - 2*Z2))
 margy2_true = as.matrix(3 * sqrt(X2) * (2*(Z2+8) - 2))
 Y2 = rnorm(n2, mean = y2_true, sd = 1)
-my.GPS <- GPspline(Y2,X2,Z2,myoptim="Nadam",spline="B",n.knots=1)
+my.GPS <- GPspline(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 my.pred <- predict(my.GPS)
-plot(Y2,my.pred$map)
+plot(Y2,my.pred$map); abline(0,1,lty=2)
 }
