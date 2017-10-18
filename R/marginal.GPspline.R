@@ -8,6 +8,8 @@
 
 #' @return Returns the MAP and the 95 percent credible interval of the fitted process as a list.
 
-marginal.GPspline <- function(object,newX=NULL,newZ=NULL,causal=FALSE){
-  pred_list <- predict(object,newX,newZ, marginal = TRUE,causal = causal)
+marginal <- function(x) UseMethod("marginal", x)
+
+marginal.GPspline <- function(object,newX,newZ,causal=FALSE){
+  predict(object,newX,newZ, marginal = TRUE,causal = causal)
 }
