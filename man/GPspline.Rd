@@ -4,7 +4,7 @@
 \alias{GPspline}
 \title{Fit a spline model with Gaussian process coefficients}
 \usage{
-GPspline(y, X, Z, kernel = "SE", spline = "ns", n.knots = 3,
+GPspline(y, X, Z, kernel = "SE", spline = "ns", n.knots = 1,
   myoptim = "GD", maxiter = 1000, tol = 1e-04, learning_rate = 0.01,
   beta1 = 0.9, beta2 = 0.999, momentum = 0)
 }

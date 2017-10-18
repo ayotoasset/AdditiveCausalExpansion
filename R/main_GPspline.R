@@ -43,7 +43,7 @@
 #' my.pred <- predict(my.GPS)
 #' plot(Y2,my.pred$map)
 
-GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.01,beta1=0.9,beta2=0.999,momentum=0.0){
+GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.01,beta1=0.9,beta2=0.999,momentum=0.0){
   if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
   n <- length(y); px <- ncol(X);
   y <- matrix(y);
@@ -69,11 +69,13 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
 
   #### select chosen spline or appropriate based on data ###
   if( isuniv && ((isbinary && (spline == "binary")) || (spline=="linear"))) {
-    cat("Using binary/linear spline\n");  mySpline <- linear_spline$new()  }
+    cat("Using binary/linear-basis\n");  mySpline <- linear_spline$new()  }
   else if( isuniv && (spline == "B") ) {
     cat("Using B-spline\n"); mySpline <- B_spline$new()  }
   else if( isuniv && (spline == "square") ) {
-    cat("Using square-spline\n"); mySpline <- square_spline$new()   }
+    cat("Using square-basis\n"); mySpline <- square_spline$new()   }
+  else if( isuniv && (spline == "cubic") ) {
+    cat("Using cubic-basis\n"); mySpline <- ns_spline$new(); n.knots=0;}
   else if( isuniv ){
     cat("Using NC-spline\n"); mySpline <- ns_spline$new()  }
 
@@ -119,7 +121,7 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=3,myoptim = "GD",ma
 
   if(iter == maxiter) cat("Optimization stopped: maximum iterations reached\n")
 
-  stats[,iter+2] = myKernel$get_train_stats(y,X,Z)
+  stats[,iter+2] = myKernel$get_train_stats(y,X,mySpline$B)
 
   graphics::par(mfrow=c(1,2))
   graphics::plot(stats[2,3:(iter+2)],type="l",ylab="log Evidence",xlab="Iteration")

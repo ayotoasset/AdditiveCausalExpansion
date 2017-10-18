@@ -28,7 +28,7 @@ B_spline <- setRefClass("B_spline",
                                     #from getAnywhere(predict.splineX)
                                     a <- c(list(x = Znew), attributes(B)[c("degree", "knots","Boundary.knots", "intercept")])
                                     Bnew <- do.call(splines2::bSpline, a)
-                                    a <- c(list(x = newx), attributes(dB)[c("degree", "knots","Boundary.knots", "intercept", "derivs")])
+                                    a <- c(list(x = Znew), attributes(dB)[c("degree", "knots","Boundary.knots", "intercept", "derivs")])
                                     dBnew <- do.call(splines2::dbs, a)
                                   } else {
                                     #return stored matrices
