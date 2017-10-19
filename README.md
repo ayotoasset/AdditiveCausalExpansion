@@ -6,10 +6,6 @@ It can be installed using (requires appropriate c++ compilers, see the documenta
 ```
 install.packages("https://github.com/mazphilip/GPspline/raw/master/builds/GPspline_0.1.4.tar.gz", repos = NULL, type = "source")
 ```
-or using the ```devtools``` package:
-```
-install_github("mazphilip/GPspline")
-```
 
 ## Theory
 The intended use case is a (for now) single dimensional set of continuous variable(s) Z whose marginal (predictive/causal) effect we are interested. The other set, the control variables X or "confounders" for causal inference, are used to make the function approximation more accurate and for the causal effects control for confounding. Using Gaussian processes, we can use differentiable spline bases to obtain the marginal effect.
@@ -34,7 +30,6 @@ n2 = 300
 X2 = matrix(runif(n2, min = 1, max = 2))
 Z2 = rnorm(n2, exp(X2)-14, 1)
 y2_true = as.matrix(72 + 3 * sqrt(X2) * ((Z2+8)^2 - 2*Z2))
-margy2_true = as.matrix(3 * sqrt(X2) * (2*(Z2+8) - 2))
 Y2 = rnorm(n2, mean = y2_true, sd = 1)
 my.GPS <- GPspline(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 my.pred <- predict(my.GPS)

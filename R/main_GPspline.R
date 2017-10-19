@@ -43,7 +43,6 @@
 #' X2 = matrix(runif(n2, min = 1, max = 2))
 #' Z2 = rnorm(n2, exp(X2)-14, 1)
 #' y2_true = as.matrix(72 + 3 * sqrt(X2) * ((Z2+8)^2 - 2*Z2))
-#' margy2_true = as.matrix(3 * sqrt(X2) * (2*(Z2+8) - 2))
 #' Y2 = rnorm(n2, mean = y2_true, sd = 1)
 #' my.GPS <- GPspline(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 #' my.pred <- predict(my.GPS)
