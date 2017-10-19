@@ -2,4 +2,6 @@
 ^\.Rproj\.user$
 ^README\.Rmd$
 ^builds
+^example
 ^todo$
+
