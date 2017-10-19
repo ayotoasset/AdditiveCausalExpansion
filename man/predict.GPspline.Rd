@@ -15,6 +15,8 @@
 \item{newZ}{A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.}
 
 \item{marginal}{A logical}
+
+\item{causal}{logical}
 }
 \value{
 Returns the MAP and the 95 percent credible interval of the fitted process as a list.

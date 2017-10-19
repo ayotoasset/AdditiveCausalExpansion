@@ -5,13 +5,14 @@ Version: 0.1.4
 Author@R: person(Philip,Pilgerstorfer,email = "philip at pilgerstorfer.org", role = c("aut", "cre"))
 Author: Philip Pilgerstorfer [aut, cre]
 Maintainer: Philip Pilgerstorfer <philip@pilgerstorfer.org>
-Description: Package for a varying-coefficients spline regression with GP-regularization of the spline coefficients using a separate set of covariates
+Description: Package for a varying-coefficients spline regression (or just basis expansion) with GP-regularization of the spline coefficients using a separate set of covariates.
 License: GPL-2
 URL: https://github.com/mazphilip/GPspline
 Encoding: UTF-8
 LazyData: true 
 Depends: R (>= 3.3.1)
 Imports: methods,
+         base,
          graphics,
          Rcpp (>= 0.12.12),
          splines2 (>= 0.2.6),

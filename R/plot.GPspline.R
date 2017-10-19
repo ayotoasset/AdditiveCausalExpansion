@@ -1,6 +1,23 @@
+#' Plot marginal effect.
+#'
+#' @param object An "GPspline" object from the GPspline function
+#' @param marginal A matrix with new data. If not presented, using the training data.
+#' @param plotly A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.
+#' @param Xlim A logical
+#' @param Xstep A logical
+#' @param Zlim A logical
+#' @param Zstep A logical
+
+#' @return Returns the plotly object
+
+
 plot.GPspline <- function(object,marginal=TRUE,plotly=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1){
 
-  # replace my.GPS with object
+  #if (requireNamespace("rgl", quietly = TRUE)) {
+  #  rgl::plot3d(...)
+  #} else {
+  #  ## do something else not involving rgl.
+  #}
 
     #one-dimensionalX
     if(!missing(Xlim)) { Xlim = (Xlim - object$moments[2,1])   / object$moments[2,2]; }

@@ -4,6 +4,7 @@
 #' @param newX A matrix with new data. If not presented, using the training data.
 #' @param newZ A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.
 #' @param marginal A logical
+#' @param causal logical
 
 #' @return Returns the MAP and the 95 percent credible interval of the fitted process as a list.
 
