@@ -7,11 +7,12 @@
 #' @param Xstep A logical
 #' @param Zlim A logical
 #' @param Zstep A logical
+#' @param truefun For simulation tests
 
 #' @return Returns the plotly object
 
 
-plot.GPspline <- function(object,marginal=TRUE,plotly=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1){
+plot.GPspline <- function(object,marginal=TRUE,plotly=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
 
   #if (requireNamespace("rgl", quietly = TRUE)) {
   #  rgl::plot3d(...)
@@ -19,34 +20,39 @@ plot.GPspline <- function(object,marginal=TRUE,plotly=TRUE,Xlim = c(-1,1),Xstep 
   #  ## do something else not involving rgl.
   #}
 
-    #one-dimensionalX
-    if(!missing(Xlim)) { Xlim = (Xlim - object$moments[2,1])   / object$moments[2,2]; }
-    if(!missing(Xstep)){ Xstep = (Xstep - object$moments[2,1]) / object$moments[2,2]; }
-    if(!missing(Zlim)) { Zlim = (Zlim - object$moments[3,1])   / object$moments[3,2]; }
-    if(!missing(Zstep)){ Zstep = (Zstep - object$moments[3,1]) / object$moments[3,2]; }
+  #one-dimensionalX
+  if(!missing(Xlim)) { Xlim = (Xlim - object$moments[2,1])   / object$moments[2,2]; }
+  if(!missing(Xstep)){ Xstep = (Xstep - object$moments[2,1]) / object$moments[2,2]; }
+  if(!missing(Zlim)) { Zlim = (Zlim - object$moments[3,1])   / object$moments[3,2]; }
+  if(!missing(Zstep)){ Zstep = (Zstep - object$moments[3,1]) / object$moments[3,2]; }
 
 
-    #Xval = apply(object$train_data$X,2,mean)
-    n <- length(seq(min(Xlim),max(Xlim),by=Xstep))
-    Xgrid <- seq(min(Xlim),max(Xlim),by=Xstep) * object$moments[2,2] + object$moments[2,1]
-    Zgrid <- seq(min(Zlim),max(Zlim),by=Zstep) * object$moments[3,2] + object$moments[3,1]
+  #Xval = apply(object$train_data$X,2,mean)
+  n <- length(seq(min(Xlim),max(Xlim),by=Xstep))
+  Xgrid <- seq(min(Xlim),max(Xlim),by=Xstep) * object$moments[2,2] + object$moments[2,1]
+  Zgrid <- seq(min(Zlim),max(Zlim),by=Zstep) * object$moments[3,2] + object$moments[3,1]
 
-    grid <- base::expand.grid(X=Xgrid, Z=Zgrid)
-    Xgrid2 <- grid$X
-    Zgrid2 <- grid$Z
-    cat("Predicting", n, "x",  n, "grid points\n")
-    marginal_surface <- predict(object,Xgrid2,Zgrid2,marginal=marginal)
-
+  grid <- base::expand.grid(X=Xgrid, Z=Zgrid)
+  Xgrid2 <- grid$X
+  Zgrid2 <- grid$Z
+  cat("Predicting", n, "x",  n, "grid points\n")
+  marginal_surface <- predict(object,Xgrid2,Zgrid2,marginal=marginal)
+  #truefun for simulation
+  if(missing(truefun)){
     grid$Y <- marginal_surface$map
     gridL = grid; gridU = grid;
     gridL$Y <- marginal_surface$ci[,1]
     gridU$Y <- marginal_surface$ci[,2]
-
-  if(!plotly){
-    # Lattice ####
-    lattice::wireframe(Y ~ X*Z, data=grid,
-                       shade=FALSE,drape = TRUE,pretty=TRUE)
   } else {
+    #true <- as.matrix(72 + 3 * sqrt(Xgrid2) * (Zgrid2+8))
+    true <- truefun(Xgrid2,Zgrid2) #as.matrix(72 + 3 * sqrt(Xgrid2) * (Zgrid2+8) + Zgrid2^2 - 0.001*Zgrid2^3)
+    grid$Y <- marginal_surface$map - true
+    gridL = grid; gridU = grid;
+    gridL$Y <- marginal_surface$ci[,1] - true
+    gridU$Y <- marginal_surface$ci[,2] - true
+  }
+
+  if(plotly){#requireNamespace("plotly", quietly = TRUE)){ #!plotly
     ## plotly ####
     Xgrid <- matrix(Xgrid,n,n)
     Zgrid <- t(matrix(Zgrid,n,n))
@@ -61,10 +67,15 @@ plot.GPspline <- function(object,marginal=TRUE,plotly=TRUE,Xlim = c(-1,1),Xstep 
           yaxis = list(title = "Treatment Z"),
           zaxis = list(title = "Outcome Y")
         ))
-    p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(marginal_surface$map,n,n))
-    p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(marginal_surface$ci[,1],n,n),opacity = 0.5)
-    p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(marginal_surface$ci[,2],n,n),opacity = 0.5)
+    p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(grid$Y,n,n))
+    p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridL$Y,n,n),opacity = 0.5)
+    p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridU$Y,n,n),opacity = 0.5)
     p
+  } else {
+    # Lattice ####
+    cat("Plotting with lattice.\n")
+    lattice::wireframe(Y ~ X*Z, data=grid,
+                       shade=FALSE,drape = TRUE,pretty=TRUE)
   }
 
-  }
+}
