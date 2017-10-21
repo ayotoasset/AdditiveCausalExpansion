@@ -12,7 +12,7 @@ bool Nesterov_cpp(double learn_rate, double momentum, arma::vec& nu, arma::vec g
   bool output_flag = arma::is_finite(grad); // if all gradients finite
 
   if(output_flag==false){
-    //std::cout << "Element that is not finite: " << find_nonfinite(grad) << std::endl;
+    Rcout << "Element that is not finite: " << find_nonfinite(grad) << std::endl;
     grad.elem( find_nonfinite(grad) ).zeros();}
 
   nu = momentum * nu + learn_rate * grad;
