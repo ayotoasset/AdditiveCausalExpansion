@@ -10,8 +10,7 @@
 
 
 predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE){
-  if( length(unique(object$train_data$Z))==2 ) { isbinary <- TRUE }
-    else { isbinary <- FALSE }
+  isbinary <- object$train_data$Zbinary
   #this function returns the prediction for the fitted Gaussian process
   if(missing(newX) || missing(newZ)){
     if(missing(newX)){
@@ -23,7 +22,7 @@ predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE)
       newZ <- object$train_data$Z #normalized
     }
   }  else if( !missing(newX) && !missing(newZ)) {
-    newX <- matrix(newX); newZ <- matrix(newZ)
+    newX <- as.matrix(newX); newZ <- as.matrix(newZ)
     if(ncol(newX)!=ncol(object$train_data$X)){ stop("Error: Dimension mismatch of X with newX", call. = FALSE) }
     if((ncol(newZ)!=ncol(object$train_data$Z)) && (length(newZ)!=1) ){ stop("Error: Dimension mismatch of Z with newZ", call. = FALSE) }
     if(length(newZ)==1){ newZ <- rep(newZ,nrow(newX)) }
@@ -40,7 +39,7 @@ predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE)
                                        newX, object$Spline$testbasis(newZ)$B,
                                        object$moments[1,1],object$moments[1,2])
   } else {
-    pred_list <- object$Kernel$predict_treat(object$train_data$y,
+    pred_list <- object$Kernel$predict_marginal(object$train_data$y,
                                              object$train_data$X,
                                              object$Spline$B,
                                              newX, object$Spline$testbasis(newZ)$dB,
