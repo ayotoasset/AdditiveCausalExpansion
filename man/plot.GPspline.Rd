@@ -5,7 +5,7 @@
 \title{Plot marginal effect.}
 \usage{
 \method{plot}{GPspline}(object, marginal = TRUE, plotly = TRUE,
-  Xlim = c(-1, 1), Xstep = 0.1, Zlim = c(-1, 1), Zstep = 0.1)
+  Xlim = c(-1, 1), Xstep = 0.1, Zlim = c(-1, 1), Zstep = 0.1, truefun)
 }
 \arguments{
 \item{object}{An "GPspline" object from the GPspline function}
@@ -21,6 +21,8 @@
 \item{Zlim}{A logical}
 
 \item{Zstep}{A logical}
+
+\item{truefun}{For simulation tests}
 }
 \value{
 Returns the plotly object
