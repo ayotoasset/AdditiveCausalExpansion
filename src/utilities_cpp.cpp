@@ -7,16 +7,28 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
   unsigned int px = X.n_cols;
   unsigned int pz = Z.n_cols;
 
-  arma::mat moments(1+px+pz,2);
-  moments.col(0).zeros(); moments.col(1).ones();
+  arma::mat moments(1+px+pz,3);
+  //Rcpp::colnames(moments) = CharacterVector::create("mean", "scale", "isbinary"); // for Rcpp objects
+  moments.col(0).zeros(); moments.col(1).ones(); moments.col(2).zeros();
 
   //create index of binary variables in X and Z
   arma::uvec isbinary(px+pz);
+  unsigned long long tmp;
   for(unsigned int i = 0; i < px; i++){
-    isbinary(i) = (arma::sum(arma::pow(arma::unique( X.col(i) ),0)) == 2); // ugly
+    tmp = sum(pow(arma::unique( X.col(i) ),0));
+    isbinary(i) = moments(i+1,2) = (tmp <= 2); // ugly but works
+    if(tmp==1){
+      Rcout << "Column " << i << " of X is constant." << std::endl;
+      X.col(i).zeros();
+    }
   }
   for(unsigned int i = px; i < (px+pz); i++){
-    isbinary(i) = (sum(pow(arma::unique( Z.col(i-px) ),0)) == 2); // ugly
+    tmp = sum(pow(arma::unique( Z.col(i-px) ),0));
+    isbinary(i) = moments(i+1,2) = (tmp <= 2); // ugly
+    if(tmp==1){
+      Rcout << "Column " << i << " of Z is constant." << std::endl;
+      Z.col(i).zeros();
+    }
   }
 
   //get mean and de-mean
@@ -44,7 +56,7 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
     }
   }
   for(unsigned int i = px+1; i < (px+pz+1); i++){
-    if(isbinary(i-1)==0){
+    if(isbinary(i-px-1)==0){
       moments(i,1) = arma::max(abs(Z.col(i-px-1)));
       Z.col(i-px-1) = Z.col(i-px-1) / moments(i,1);
     }
