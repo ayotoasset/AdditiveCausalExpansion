@@ -42,12 +42,16 @@
 #' n2 = 300
 #' X2 = matrix(runif(n2, min = 1, max = 2))
 #' Z2 = rnorm(n2, exp(X2)-14, 1)
-#' y2_true = as.matrix(72 + 3 * sqrt(X2) * ((Z2+8)^2 - 2*Z2))
+#' y_truefun = function(x,z) {as.matrix(3 * sqrt(x) * ((z+8)^2 - 2*z))}
+#' y2_true = y_truefun(X2,Z2)
 #' Y2 = rnorm(n2, mean = y2_true, sd = 1)
 #' my.GPS <- GPspline(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 #' my.pred <- predict(my.GPS)
 #' plot(Y2,my.pred$map); abline(0,1,lty=2)
-#' plot(my.GPS,marginal=TRUE)
+#' #comparison with the true curve:
+#' plot(my.GPS,marginal=FALSE,plotly=TRUE,truefun = y_truefun)
+#' #plotting of the marginal curve:
+#' plot(my.GPS,marginal=TRUE,plotly=TRUE)
 
 GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.001,beta1=0.9,beta2=0.999,momentum=0.0){
   if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
@@ -58,7 +62,7 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",ma
   else if(length(c(Z))==n ) { pz <- 1; }
   else { stop("Dimension/filetype of Z invalid.\n") }
 
-  X <- as.matrix(as.numeric(X))
+  X <- as.matrix(X)
   if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
   Z <- as.matrix(as.numeric(Z))
   if( !all(dim(X)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
@@ -70,8 +74,8 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",ma
   #check whether Z is univariate
   if( pz > 1 ) isuniv = FALSE else isuniv = TRUE
   #check whether Z is binary
-  if( (length(unique(c(Z))) > 2) ) {cat("Non-Binary Z detected\n"); isbinary = FALSE}
-  else {cat("Binary Z detected\n"); isbinary = TRUE; spline = "binary"}
+  if( isbinary <- (length(unique(c(Z))) == 2) ) {cat("Binary Z detected\n"); spline = "binary"}
+  else {cat("Non-Binary Z detected\n"); isbinary = FALSE}
 
   #### select chosen spline or appropriate based on data ###
   if( isuniv && ((isbinary && (spline == "binary")) || (spline=="linear"))) {
@@ -136,7 +140,7 @@ GPspline <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",ma
 
   structure(list(Kernel = myKernel, Spline=mySpline,
                  moments=moments,
-                 train_data=list(y = y,X = X,Z = Z)),
+                 train_data=list(y = y,X = X,Z = Z, Zbinary = isbinary)),
                  class = "GPspline")
 }
 
