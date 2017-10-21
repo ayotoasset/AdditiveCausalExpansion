@@ -9,7 +9,6 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    parainit = function(y,p,B) {
                                      B <<- B
                                      p <<- p
-
                                      parameters <<- matrix(c(log(1), #sigma
                                                       mean(y), #mu
                                                       log(seq(B,1)),
@@ -25,7 +24,6 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      #- L:       [2+B,1+B*(p+1)] | [(3+B):(2+B*(p+1))]
                                      #in Cpp:
                                      # L(i,b) = parameters[2+(B-1)+b+B*i] = parameters[1+B+b+B*i] = parameters[1+b+B*(i+1)]
-
                                    },
                                    kernel_mat = function(X1,X2,Z1,Z2) {
                                      #intended use for prediction
@@ -34,20 +32,16 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    },
                                    kernel_mat_sym = function(X,Z) {
                                      #intended use for the gradient step
-                                     Klist = kernmat_SE_symmetric_cpp(X,Z,parameters)
+                                     Klist <- kernmat_SE_symmetric_cpp(X,Z,parameters)
                                      Kmat <<- Klist$full
                                      Karray <<- Klist$elements
                                      Klist
                                    },
                                    getinv_kernel = function(X,Z) {
                                      #get matrices and return inverse for prediction
-
-                                     #get new kernel and invert with noise
-                                     Klist = kernel_mat_sym(X,Z)
-
+                                     kernel_mat_sym(X,Z)
                                      invKmatList <- invkernel_cpp(Kmat,c(parameters[1])) #no error handling, return eigenvalues!
                                      invKmatn <<- invKmatList$inv
-
                                      invKmatList
                                    },
                                    para_update = function(iter,y,X,Z,Optim) {
@@ -67,7 +61,9 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    },
                                    get_train_stats = function(y,X,Z,invKmatList){
                                      if(missing(invKmatList)){
-                                       invKmatList <- getinv_kernel(X,Z)
+                                       #do not update the inverse
+                                       Klist = kernel_mat_sym(X,Z)
+                                       invKmatList <- invkernel_cpp(Klist$full,c(parameters[1]))
                                      }
 
                                      stats <- stats_SE_cpp(y,Kmat, invKmatList$inv,invKmatList$eigenval, parameters[2])
@@ -83,12 +79,12 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      K_xX = kernel_mat(X2,X,Z2,Z)$full
                                      K_xx = kernel_mat_sym(X2,Z2)$full
 
-                                     outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx,mean_y,var_y)
+                                     outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx, mean_y,var_y)
                                    },
-                                   predict_treat = function(y,X,Z,X2,dZ2,mean_y,var_y,isbinary){
+                                   predict_marginal = function(y,X,Z,X2,dZ2,mean_y,var_y,calculate_ate){
 
                                      n = length(y);
-                                     n2 = nrow(X2)
+                                     n2 = nrow(X2);
 
                                      Kmarginal_xX = kernel_mat(X2,X,dZ2,Z)$elements
                                      Kmarginal_xx = kernel_mat_sym(X2,dZ2)$elements
@@ -96,7 +92,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      outlist <- pred_marginal_cpp(y,parameters[1],parameters[2],
                                                                   invKmatn,
                                                                   Kmarginal_xX, Kmarginal_xx,
-                                                                  mean_y,var_y,isbinary)
+                                                                  mean_y,var_y,calculate_ate)
                                    }
                                  )
 )
