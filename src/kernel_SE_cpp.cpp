@@ -22,7 +22,8 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,const arma::mat& X2,const arma::ma
 
   for(unsigned int i = 0; i < p; i++){ // for every element of x
     for(unsigned int r = 0; r < n1; r++){ //for every output row
-      tmprow = pow(X1(r,i) - conv_to<rowvec>::from(X2.col(i)), 2);
+      tmprow = arma::pow(X1(r,i) - conv_to<rowvec>::from(X2.col(i)), 2);
+
       for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
         tmpX.slice(b).row(r) += tmprow * exp(- parameters[1+b+B*(i+1)]  );//L(i,b)
       }
@@ -114,19 +115,26 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X, const arma::mat& Z, cons
 // [[Rcpp::export]]
 Rcpp::List invkernel_cpp(arma::mat pdmat, const double sigma){
   unsigned int n = pdmat.n_cols;
-  arma::vec eigval(n);
-  arma::mat eigvec(n,n);
+  arma::vec eigval(n); eigval.ones();
+  arma::mat eigvec(n,n); eigvec.eye();
   pdmat.diag() += exp(sigma);
-  arma::eig_sym( eigval, eigvec, pdmat);
 
+  if(!arma::eig_sym( eigval, eigvec, pdmat)){
+    Rcout << "Eigenvalue decomp. not completed." << std::endl;
+  }
+
+  //get inverse and eigenvalues
   arma::mat invKmat(n,n);
-  //invKmat = arma::inv_sympd(pdmat);
   invKmat = eigvec;
   for(unsigned int i = 0; i < n; i++){
     invKmat.col(i) = invKmat.col(i) / eigval[i];
   }
   invKmat = invKmat * eigvec.t();
 
+  if( eigval[0]<=0 ){
+    Rcout << "Smallest eigenvalue is negative or zero! - This should not happen as sigma puts a lower bound on the eigenvalues." << std::endl;
+    Rcout << "Sigma^2: " << exp(sigma) << std::endl;
+  }
 
   return Rcpp::List::create(_("eigenval") =  eigval,
                             _("inv") = invKmat); //out["eigenvec"] = eigvec;
@@ -157,9 +165,7 @@ arma::mat evid_scale_gradients(const arma::mat& X, const arma::mat& Kaa, const a
     for(unsigned int b=0; b < B; b++){
       // replace parameter with its gradient
       L[b + B*i] = - 0.5 * arma::trace( Kaa * (K.slice(b) % tmpX) * exp( - L[b + B*i] ) );
-      //std::cout << "b: " << b << " | i:" << i << " | L: " << L[b + B*i] <<  std::endl;
     }
-
   }
   return L;
 }
@@ -264,7 +270,7 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
                              const arma::mat& invK_XX,
                              const arma::cube& K_xX, const arma::cube& K_xx,
                              const double& mean_y, const double& std_y,
-                             bool isbinary){ // cube argins for x-kernel matrices
+                             bool calculate_ate){ // cube argins for x-kernel matrices
   unsigned int nx = K_xx.slice(0).n_rows;
   unsigned int nX = invK_XX.n_rows;
   unsigned int B = K_xx.n_slices;
@@ -273,24 +279,24 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
   arma::mat ci(nx,2);
   arma::mat tmp(nx,nX);
 
-  arma::mat Kmarg_xx(nx,nx); Kmarg_xx = K_xx.slice(1);
   arma::mat Kmarg_xX(nx,nX); Kmarg_xX = K_xX.slice(1);
-  for(unsigned int b=2; b < B; b++){ // not the "constant" nuisance term and b=1
-    Kmarg_xx += K_xx.slice(b); //cumsum only for matrices
+  arma::mat Kmarg_xx(nx,nx); Kmarg_xx = K_xx.slice(1);
+  for(unsigned int b = 2; b < B; b++){ // not the "constant" nuisance term and b=1
     Kmarg_xX += K_xX.slice(b);
+    Kmarg_xx += K_xx.slice(b);
   }
 
   tmp = Kmarg_xX * invK_XX;
-  y_x = tmp * (y_X - mu);
-  y_x = std_y * y_x;
+  y_x = std_y * tmp * (y_X - mu);
+  //y_x = std_y * y_x;
 
-  Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t();
+  Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t(); //saving storage
 
   ci.col(1) = std_y * 1.96 * sqrt(Kmarg_xx.diag());
   ci.col(0) = y_x - ci.col(1);
   ci.col(1) = y_x + ci.col(1);
 
-  if(!isbinary){
+  if(!calculate_ate){
     return Rcpp::List::create(_("map") = y_x,
                               _("ci") = ci);
   } else {
