@@ -251,13 +251,13 @@ Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
   arma::mat tmp(nx,nX);
 
   tmp = K_xX * invK_XX;
-  y_x = mean_y + std_y *tmp * (y_X - mu) + mu;
+  y_x = mean_y + std_y * (tmp * (y_X - mu) + mu);
   //y_x = mean_y + std_y * y_x;
 
   K_xx = K_xx - tmp * K_xX.t();
   K_xx.diag() += exp(sigma);
-
-  ci.col(1) = std_y*1.96 * sqrt(K_xx.diag());
+  //absolute value for nuemric stability
+  ci.col(1) = std_y*1.96 * sqrt(abs(K_xx.diag()));
   ci.col(0) = y_x - ci.col(1);
   ci.col(1) = y_x + ci.col(1);
 
