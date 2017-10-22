@@ -251,8 +251,8 @@ Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
   arma::mat tmp(nx,nX);
 
   tmp = K_xX * invK_XX;
-  y_x = tmp * (y_X - mu) + mu;
-  y_x = mean_y + std_y * y_x;
+  y_x = mean_y + std_y *tmp * (y_X - mu) + mu;
+  //y_x = mean_y + std_y * y_x;
 
   K_xx = K_xx - tmp * K_xX.t();
   K_xx.diag() += exp(sigma);
@@ -285,14 +285,15 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
     Kmarg_xX += K_xX.slice(b);
     Kmarg_xx += K_xx.slice(b);
   }
-
+  //invK_XX.diag() = invK_XX.diag() + 0.00001;
   tmp = Kmarg_xX * invK_XX;
   y_x = std_y * tmp * (y_X - mu);
   //y_x = std_y * y_x;
 
   Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t(); //saving storage
 
-  ci.col(1) = std_y * 1.96 * sqrt(Kmarg_xx.diag());
+  //taking absolute value as this can be numerically unstable:
+  ci.col(1) = std_y * 1.96 * sqrt(abs(Kmarg_xx.diag()));
   ci.col(0) = y_x - ci.col(1);
   ci.col(1) = y_x + ci.col(1);
 
