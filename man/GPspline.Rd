@@ -2,18 +2,16 @@
 % Please edit documentation in R/main_GPspline.R
 \name{GPspline}
 \alias{GPspline}
-\title{Fit a spline model with Gaussian process coefficients}
+\title{Fir GPspline, data.frame wrapper of GPspline.train}
 \usage{
-GPspline(y, X, Z, kernel = "SE", spline = "ns", n.knots = 1,
+GPspline(formula, data, kernel = "SE", spline = "ns", n.knots = 1,
   myoptim = "GD", maxiter = 1000, tol = 1e-04, learning_rate = 0.001,
   beta1 = 0.9, beta2 = 0.999, momentum = 0)
 }
 \arguments{
-\item{y}{A numeric vector}
+\item{formula}{Formula of the form \code{y ~ x | z} where the \code{x} variables determine the coefficients of the (spline) basis expansion of \code{z}.}
 
-\item{X}{A numeric vector or matrix}
-
-\item{Z}{A vector or matrix (multivariate / tensor splines might be added in the future) Factors will be transformed to numeric using as.numeric. Hence, non-binary actors are discouraged especially when they are not ordinal.}
+\item{data}{A data.frame containing the variables in the formula.}
 
 \item{kernel}{A string (default: "SE" Squared exponential with ARD) -- has no effect, might include (ARD) polynomial and Matern 5/2 kernel}
 
@@ -36,45 +34,23 @@ GPspline(y, X, Z, kernel = "SE", spline = "ns", n.knots = 1,
 \item{momentum}{(default: 0.0) Momentum for the empirical Bayes optimization when using Nesterov. Equivalent to gradient descent ("GD") if momentum is 0.}
 }
 \value{
-The function returns the fitted process as a GPspline class object. Predictions can be obtained using the corresponding S3 methods "prediction" and "marginal".
-The latter is the predicted curve with a differentiated basis of Z.
+GPspline object that can be used for prediction and plotting
 }
 \description{
-Fit a spline model with Gaussian process coefficients
+Fir GPspline, data.frame wrapper of GPspline.train
 }
 \examples{
-#Example replicating CausalStump with binary uni-variate Z
-#Generate data
-set.seed(1231)
-n = 120
-Z = rbinom(n, 1, 0.3)
-X1 = runif(sum(Z), min = 20, max = 40)
-X0 = runif(n-sum(Z), min = 20, max = 40)
-X = matrix(NaN,n,1)
-X[Z==1,] = X1; X[Z==0,] = X0
-sort.idx = sort(X,index.return=TRUE)$ix
-y0_true = as.matrix(72 + 3 * sqrt(X))
-y1_true = as.matrix(90 + exp(0.06 * X))
-Y0 = rnorm(n, mean = y0_true, sd = 1)
-Y1 = rnorm(n, mean = y1_true, sd = 1)
-Y = Y0*(1-Z) + Y1*Z
-my.GPS <- GPspline(Y,X,Z,myoptim="Nadam")
-#print (sample) average treatment effect (ATE)
-predict(my.GPS,marginal=TRUE,causal=TRUE)$ate_map
-#true ATE
-mean(y1_true-y0_true)
-
 #continuous Z
 set.seed(1234)
-n2 = 300
-X2 = matrix(runif(n2, min = 1, max = 2))
-Z2 = rnorm(n2, exp(X2)-14, 1)
-y_truefun = function(x,z) {as.matrix(3 * sqrt(x) * ((z+8)^2 - 2*z))}
-y2_true = y_truefun(X2,Z2)
-Y2 = rnorm(n2, mean = y2_true, sd = 1)
-my.GPS <- GPspline(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
+n2 <- 300
+df <- data.frame(x = runif(n2, min = 1, max = 2))
+df$z = rnorm(n2, exp(df$x)-14, 1)
+y_truefun <- function(x,z) {as.matrix(3 * sqrt(x) * ((z+8)^2 - 2*z))}
+y2_true <- y_truefun(df$x,df$z)
+df$y <- rnorm(n2, mean = y2_true, sd = 1)
+my.GPS <- GPspline(y ~ x | z,data=df,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 my.pred <- predict(my.GPS)
-plot(Y2,my.pred$map); abline(0,1,lty=2)
+plot(df$y,my.pred$map); abline(0,1,lty=2)
 #comparison with the true curve:
 plot(my.GPS,marginal=FALSE,plotly=TRUE,truefun = y_truefun)
 #plotting of the marginal curve:

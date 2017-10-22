@@ -1,7 +1,7 @@
 Package: GPspline
 Type: Package
 Title: GPspline: Varying-coefficients spline model with GP-priors
-Version: 0.1.4
+Version: 0.1.5
 Author@R: person(Philip,Pilgerstorfer,email = "philip at pilgerstorfer.org", role = c("aut", "cre"))
 Author: Philip Pilgerstorfer [aut, cre]
 Maintainer: Philip Pilgerstorfer <philip@pilgerstorfer.org>
@@ -10,7 +10,8 @@ License: GPL-2
 URL: https://github.com/mazphilip/GPspline
 Encoding: UTF-8
 LazyData: true 
-Depends: R (>= 3.3.1)
+Depends: R (>= 3.3.1),
+         Formula (>= 1.2)
 Imports: methods,
          base,
          graphics,
