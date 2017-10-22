@@ -18,8 +18,8 @@ Imports: methods,
          Rcpp (>= 0.12.12),
          splines2 (>= 0.2.6),
          ggplot2 (>= 2.2.1),
-         lattice,
-         plotly
+         lattice
+Suggests: plotly (>= 4.7)         
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 6.0.1
 
