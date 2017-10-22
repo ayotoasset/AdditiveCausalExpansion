@@ -12,10 +12,20 @@
 #' @return Returns the plotly object
 
 
-plot.GPspline <- function(object,Xcol,marginal=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
+plot.GPspline <- function(object,Xcol,marginal=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun,contour=FALSE){
   #For the colors see http://jfly.iam.u-tokyo.ac.jp/color/#what
+
+  Blue100    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-0)*255/100)
+  SkyBlue100 <- grDevices::rgb(86, 180, 233, max=255, alpha = (100-0)*255/100)
+  #cool = rainbow(10, start=rgb2hsv(col2rgb(SkyBlue100)), end=rgb2hsv(col2rgb(Blue100)),alpha=1)
+
+  Orange100  <- grDevices::rgb(230, 159, 0, max=255, alpha = (100-0)*255/100)
   Vermillion50  <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-50)*255/100)
   Vermillion100 <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-0)*255/100)
+  #warm = rainbow(10, start=rgb2hsv(col2rgb(Orange100)), end=rgb2hsv(col2rgb(Vermillion100)),alpha=1)
+
+  #cols = c(rev(cool), rev(warm))
+  #mypalette <- grDevices::colorRampPalette(cols)(255)
 
   px <- ncol(object$train_data$X)
   pz <- 1
@@ -25,6 +35,7 @@ plot.GPspline <- function(object,Xcol,marginal=TRUE,Xlim = c(-1,1),Xstep = 0.1,Z
   #for continuous Z so far!
   Zgrid <- seq(min(Zlim),max(Zlim),by=Zstep) * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
 
+  #MIGHT NOT WORK FOR px>=2!!!
   medX <- apply(object$train_data$X * object$moments[1:(px+1),2] + object$moments[1:(px+1),1],2,median)
 
   if(!missing(Xcol)){
@@ -51,11 +62,11 @@ plot.GPspline <- function(object,Xcol,marginal=TRUE,Xlim = c(-1,1),Xstep = 0.1,Z
     ngrid <- n^2
 
     #generate matrix with medians and replace column Xcol with the grid elements
-    Xgrid <- t(matrix(rep(medX,n),px,ngrid))
-    Xgrid[,Xcol] <- grid$X
+    Xgrid2 <- t(matrix(rep(medX,n),px,ngrid))
+    Xgrid2[,Xcol] <- grid$X
 
     cat("Predicting", n, "x",  n, "grid points\n")
-    surface <- predict(object,Xgrid,grid$Z,marginal=marginal)
+    surface <- predict(object,Xgrid2,grid$Z,marginal=marginal)
     #truefun for simulation
     if(missing(truefun)){
       grid$Y <- surface$map
@@ -63,14 +74,14 @@ plot.GPspline <- function(object,Xcol,marginal=TRUE,Xlim = c(-1,1),Xstep = 0.1,Z
       gridL$Y <- surface$ci[,1]
       gridU$Y <- surface$ci[,2]
     } else {
-      true <- truefun(Xgrid,grid$Z)
+      true <- truefun(Xgrid2,grid$Z)
       grid$Y <- surface$map - true
       gridL = grid; gridU = grid;
       gridL$Y <- surface$ci[,1] - true
       gridU$Y <- surface$ci[,2] - true
     }
 
-    if(requireNamespace("plotly", quietly = TRUE)){ #!plotly
+    if(!requireNamespace("plotly", quietly = TRUE) && (contour==FALSE)){ #!plotly
       ## plotly ####
       Xgrid <- matrix(Xgrid,n,n)
       Zgrid <- t(matrix(Zgrid,n,n))
@@ -92,8 +103,14 @@ plot.GPspline <- function(object,Xcol,marginal=TRUE,Xlim = c(-1,1),Xstep = 0.1,Z
     } else {
       # Lattice ####
       cat("Plotly package not installed. Plotting with lattice.\n")
-      lattice::wireframe(Y ~ X*Z, data=grid,
-                         shade=FALSE,drape = TRUE,pretty=TRUE)
+      #lattice::wireframe(Y ~ X*Z, data=grid,
+      #                   shade=FALSE,drape = TRUE,pretty=TRUE)
+      graphics::image(x=Xgrid,y=Zgrid,z=matrix(grid$Y,n,n),xlab=paste0("X[,",Xcol,"]"),ylab="Z")
+      graphics::contour(x=Xgrid,y=Zgrid,z=matrix(grid$Y,n,n),add=TRUE,vfont=c("sans serif","bold"))
+      obsX <- object$train_data$X[,Xcol] * object$moments[1+Xcol,2]+ object$moments[1+Xcol,1]
+      obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
+      points(obsX,obsZ,cex=0.5)
+
     }
   } else { #if not column of X selected
     n <- length(Zgrid)
@@ -111,11 +128,13 @@ plot.GPspline <- function(object,Xcol,marginal=TRUE,Xlim = c(-1,1),Xstep = 0.1,Z
       obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
       y_limit <- c(min(YgridL,obsY),max(YgridU,obsY))
     } else {
+      obsY <- NULL
+      obsZ <- NULL
       y_limit <- c(min(YgridL),max(YgridU))
     }
     plot(obsZ, obsY, xlim=range(Zgrid),cex=0.5,ylab="Outcome Y",xlab="Basis expanded Z",ylim = y_limit)
     if(!missing(truefun)){
-      lines(Zgrid,truefun(Xgrid,Zgrid),lty=2)
+      lines(Zgrid,truefun(Xgrid,Zgrid),lty=2,lwd=1.5)
     }
     lines(Zgrid,Ygrid,lty=2,lwd=2,col=Vermillion100)
     polygon(c(Zgrid, rev(Zgrid)),c(YgridL,rev(YgridU)),col = Vermillion50, border = FALSE)
