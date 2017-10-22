@@ -4,15 +4,15 @@
 \alias{plot.GPspline}
 \title{Plot marginal effect.}
 \usage{
-\method{plot}{GPspline}(object, marginal = TRUE, plotly = TRUE,
-  Xlim = c(-1, 1), Xstep = 0.1, Zlim = c(-1, 1), Zstep = 0.1, truefun)
+\method{plot}{GPspline}(object, Xcol, marginal = TRUE, Xlim = c(-1, 1),
+  Xstep = 0.1, Zlim = c(-1, 1), Zstep = 0.1, truefun)
 }
 \arguments{
 \item{object}{An "GPspline" object from the GPspline function}
 
-\item{marginal}{A matrix with new data. If not presented, using the training data.}
+\item{Xcol}{Either numeric or character, the latter only works if the training was done with a data.frame (i.e. not GPspline.train). If missing plots the 2D graph of Y on Z.}
 
-\item{plotly}{A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.}
+\item{marginal}{A logical statement, default: \code{FALSE}. If \code{TRUE}, plots the marginal surface of the response surface Y with respect to the basis expanded model Z using average X.}
 
 \item{Xlim}{A logical}
 

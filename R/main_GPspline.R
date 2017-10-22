@@ -18,6 +18,7 @@
 #' @examples
 #' #Example replicating CausalStump with binary uni-variate Z
 #' #Generate data
+#' library(GPspline)
 #' set.seed(1231)
 #' n <- 120
 #' Z <- rbinom(n, 1, 0.3)
@@ -39,19 +40,22 @@
 #'
 #' #continuous Z
 #' set.seed(1234)
-#' n2 <- 300
+#' n2 <- 200
 #' X2 <- matrix(runif(n2, min = 1, max = 2))
 #' Z2 <- rnorm(n2, exp(X2)-14, 1)
-#' y_truefun <- function(x,z) {as.matrix(3 * sqrt(x) * ((z+8)^2 - 2*z))}
+#' y_truefun <- function(x,z) {as.matrix(sqrt(x) * 3 * ((z+8)^2 - 2*z))}
 #' y2_true <- y_truefun(X2,Z2)
 #' Y2 <- rnorm(n2, mean = y2_true, sd = 1)
 #' my.GPS <- GPspline.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 #' my.pred <- predict(my.GPS)
 #' plot(Y2,my.pred$map); abline(0,1,lty=2)
 #' #comparison with the true curve:
-#' plot(my.GPS,marginal=FALSE,plotly=TRUE,truefun = y_truefun)
+#' plot(my.GPS,marginal=FALSE,truefun = y_truefun)
 #' #plotting of the marginal curve:
-#' plot(my.GPS,marginal=TRUE,plotly=TRUE)
+#' plot(my.GPS,marginal=TRUE)
+#' #plot of the 2D curve with only Z
+#' plot(my.GPS,marginal=FALSE,truefun=y_truefun)
+#'
 
 GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.001,beta1=0.9,beta2=0.999,momentum=0.0){
 
@@ -63,9 +67,9 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
   else if(length(c(Z))==n ) { pz <- 1; }
   else { stop("Dimension/filetype of Z invalid.\n") }
 
-  X <- as.matrix(X)
+  X <- matrix(as.numeric(X))
   if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
-  Z <- as.matrix(as.numeric(Z))
+  Z <- matrix(as.numeric(Z))
   if( !all(dim(X)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
   if( !all(dim(Z)==c(n,pz)) ) stop("Dimension of Z not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
 

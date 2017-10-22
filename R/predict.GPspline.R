@@ -22,7 +22,8 @@ predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE)
       newZ <- object$train_data$Z #normalized
     }
   }  else if( !missing(newX) && !missing(newZ)) {
-    newX <- as.matrix(newX); newZ <- as.matrix(newZ)
+    newX <- matrix(newX); newZ <- matrix(newZ)
+
     if(ncol(newX)!=ncol(object$train_data$X)){ stop("Error: Dimension mismatch of X with newX", call. = FALSE) }
     if((ncol(newZ)!=ncol(object$train_data$Z)) && (length(newZ)!=1) ){ stop("Error: Dimension mismatch of Z with newZ", call. = FALSE) }
     if(length(newZ)==1){ newZ <- rep(newZ,nrow(newX)) }
