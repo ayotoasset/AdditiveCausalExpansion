@@ -26,7 +26,7 @@ predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE)
 
     if(ncol(newX)!=ncol(object$train_data$X)){ stop("Error: Dimension mismatch of X with newX", call. = FALSE) }
     if((ncol(newZ)!=ncol(object$train_data$Z)) && (length(newZ)!=1) ){ stop("Error: Dimension mismatch of Z with newZ", call. = FALSE) }
-    if(length(newZ)==1){ newZ <- rep(newZ,nrow(newX)) }
+    if(length(newZ)==1){ newZ <- matrix(rep(newZ,nrow(newX)),nrow(newX),1) }
 
     #normalize the non-binary variables
     normalize_test(newX,newZ,object$moments)
