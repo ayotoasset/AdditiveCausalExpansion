@@ -48,11 +48,12 @@
 #' Y2 <- rnorm(n2, mean = y2_true, sd = 1)
 #' my.GPS <- GPspline.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 #' my.pred <- predict(my.GPS)
+#' #quality of prediction
 #' plot(Y2,my.pred$map); abline(0,1,lty=2)
 #' #comparison with the true curve:
-#' plot(my.GPS,marginal=FALSE,truefun = y_truefun)
+#' plot(my.GPS,1,marginal=FALSE,truefun = y_truefun)
 #' #plotting of the marginal curve:
-#' plot(my.GPS,marginal=TRUE)
+#' plot(my.GPS,1,marginal=TRUE)
 #' #plot of the 2D curve with only Z
 #' plot(my.GPS,marginal=FALSE,truefun=y_truefun)
 #'
