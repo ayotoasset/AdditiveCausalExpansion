@@ -15,21 +15,25 @@ predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE)
   if(missing(newX) || missing(newZ)){
     if(missing(newX)){
       cat("No newX given, using training X.\n")
-      newX <- object$train_data$X #normalized
+      newX.intern <- object$train_data$X #normalized
+    } else {
+      newX.intern <- newX
     }
     if(missing(newZ)){
       cat("No newZ given, using training Z.\n")
-      newZ <- object$train_data$Z #normalized
+      newZ.intern <- object$train_data$Z #normalized
+    } else {
+      newZ.intern <- newZ
     }
   }  else if( !missing(newX) && !missing(newZ)) {
-    newX <- matrix(newX); newZ <- matrix(newZ)
+    newX.intern <- as.matrix(newX); newZ.intern <- as.matrix(newZ)
 
-    if(ncol(newX)!=ncol(object$train_data$X)){ stop("Error: Dimension mismatch of X with newX", call. = FALSE) }
-    if((ncol(newZ)!=ncol(object$train_data$Z)) && (length(newZ)!=1) ){ stop("Error: Dimension mismatch of Z with newZ", call. = FALSE) }
-    if(length(newZ)==1){ newZ <- matrix(rep(newZ,nrow(newX)),nrow(newX),1) }
+    if(ncol(newX.intern)!=ncol(object$train_data$X)){ stop("Error: Dimension mismatch of X with newX", call. = FALSE) }
+    if((ncol(newZ.intern)!=ncol(object$train_data$Z)) && (length(newZ)!=1) ){ stop("Error: Dimension mismatch of Z with newZ", call. = FALSE) }
+    if(length(newZ)==1){ newZ.intern <- matrix(rep(newZ,nrow(newX.intern)),nrow(newX.intern),1) }
 
     #normalize the non-binary variables
-    normalize_test(newX,newZ,object$moments)
+    normalize_test(newX.intern,newZ.intern,object$moments)
   }
 
   #get appropriate basis
@@ -37,13 +41,13 @@ predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE)
     pred_list <- object$Kernel$predict(object$train_data$y,
                                        object$train_data$X,
                                        object$Spline$B,
-                                       newX, object$Spline$testbasis(newZ)$B,
+                                       newX.intern, object$Spline$testbasis(newZ.intern)$B,
                                        object$moments[1,1],object$moments[1,2])
   } else {
     pred_list <- object$Kernel$predict_marginal(object$train_data$y,
                                              object$train_data$X,
                                              object$Spline$B,
-                                             newX, object$Spline$testbasis(newZ)$dB,
+                                             newX.intern, object$Spline$testbasis(newZ.intern)$dB,
                                              object$moments[1,1],object$moments[1,2],(isbinary && causal))
   }
   pred_list

@@ -4,6 +4,7 @@
 #' @param Xcol Either numeric or character, the latter only works if the training was done with a data.frame (i.e. not GPspline.train). If missing plots the 2D graph of Y on Z.
 #' @param marginal A logical statement, default: \code{FALSE}. If \code{TRUE}, plots the marginal surface of the response surface Y with respect to the basis expanded model Z using average X.
 #' @param plot3D A logical statemnt whether a three-dimensional plot should be produced. This is only valid if an X-column is selected and the plotly package is installed.
+#' @param show.training A logical
 #' @param Xlim A two-dimensional vector
 #' @param Xstep A scalar
 #' @param Zlim A two-dimensional vector
@@ -13,29 +14,19 @@
 #' @return Returns the plotly object
 
 
-plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1),Xstep = 0.05,Zlim = c(-1,1),Zstep = 0.1,truefun){
+plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
   #For the colors see http://jfly.iam.u-tokyo.ac.jp/color/#what
 
   Blue100    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-0)*255/100)
   Blue50    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-50)*255/100)
+  BlueishGreen50 <- grDevices::rgb(0, 158, 115, max=255, alpha = (100-50)*255/100)
+  BlueishGreen100 <- grDevices::rgb(0, 158, 115, max=255, alpha = (100-0)*255/100)
   SkyBlue100 <- grDevices::rgb(86, 180, 233, max=255, alpha = (100-0)*255/100)
   Orange100  <- grDevices::rgb(230, 159, 0, max=255, alpha = (100-0)*255/100)
   Vermillion50  <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-50)*255/100)
   Vermillion100 <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-0)*255/100)
 
-  if(missing(truefun)){
-    if(marginal==TRUE){
-      y.label <- "Marginal Y"
-    } else {
-      y.label <- "Outcome Y"
-    }
-  } else {
-    if(marginal==TRUE){
-      y.label <- "Diff. to true marg. Y"
-    } else {
-      y.label <- "Diff. to true Y"
-    }
-  }
+
 
   px <- ncol(object$train_data$X)
   pz <- 1
@@ -52,17 +43,18 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
     #make numeric
     if(is.numeric(Xcol)) {
       nXcol <- paste0("X[,",Xcol,"]")
-      idx <- (Xcol == seq(px))*1L
+      idx <- (Xcol == seq(1,px))*1L
     }
     else if(is.character(Xcol) && (Xcol %in% colnames(object$train_data$X))) {
       nXcol <- Xcol
-      idx <- ("abc"== c("abc","dcf","hef"))
+      idx <- (Xcol == colnames(object$train_data$X))
       Xcol <- which(idx)
       idx <- idx*1L
     }
     else {
       stop("Supply either a numeric column index for X, or if  the object was generated with the data.frame wrapper, a valid variable name.\n")
     }
+
     if(!missing(Xlim)) { Xlim = (Xlim - object$moments[1+Xcol,1])   / object$moments[1+Xcol,2]; }
     if(!missing(Xstep)){ Xstep = (Xstep - object$moments[1+Xcol,1]) / object$moments[1+Xcol,2]; }
     nx <- length(seq(min(Xlim),max(Xlim),by=Xstep))
@@ -70,16 +62,32 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
     Xgrid <- seq(min(Xlim),max(Xlim),by=Xstep) * object$moments[1+Xcol,2] + object$moments[1+Xcol,1]
   }
 
+  if(show.training){
+    obsX <- object$train_data$X[,Xcol] * object$moments[1+Xcol,2]+ object$moments[1+Xcol,1]
+    obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
+    obsY <- object$train_data$y * object$moments[1,2] + object$moments[1,1]
+  }
+
   if(!object$train_data$Zbinary){
+    if(missing(truefun)){
+      if(marginal==TRUE){
+        y.label <- "Marginal Y"
+      } else {
+        y.label <- "Outcome Y"
+      }
+    } else {
+      if(marginal==TRUE){
+        y.label <- "Diff. to true marg. Y"
+      } else {
+        y.label <- "Diff. to true Y"
+      }
+    }
+
     #for continuous Z so far!
     Zgrid <- seq(min(Zlim),max(Zlim),by=Zstep) * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
     nz <- length(seq(min(Zlim),max(Zlim),by=Zstep))
 
     if(!missing(Xcol)){
-
-      obsX <- object$train_data$X[,Xcol] * object$moments[1+Xcol,2]+ object$moments[1+Xcol,1]
-      obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
-      obsY <- object$train_data$y * object$moments[1,2] + object$moments[1,1]
 
       grid <- base::expand.grid(X=Xgrid, Z=Zgrid)
       ngrid <- nx*nz
@@ -89,10 +97,10 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
       Xgrid2[,Xcol] <- grid$X
 
       cat("Predicting", nz, "x",  nx, "grid points\n")
-      surface <- predict(object,Xgrid2,grid$Z,marginal=marginal)
+      surface <- predict(object,as.matrix(Xgrid2),grid$Z,marginal=marginal)
 
-      if(marginal){
-        obsY <- invisible(predict(object,marginal=TRUE)$map)
+      if(marginal && show.training){
+        invisible(capture.output(obsY <- predict(object,marginal=TRUE)$map)) #surpress output as it is expected
       }
 
       #truefun for simulation
@@ -108,7 +116,11 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
         gridL$Y <- surface$ci[,1] - true
         gridU$Y <- surface$ci[,2] - true
 
-        obsY <- obsY - truefun(obsX,obsZ)
+        if(show.training==TRUE){
+          Xgrid3 <- t(matrix(rep(medX,length(obsZ)),px,length(obsZ)))
+          Xgrid3[,Xcol] <- obsX
+          obsY <- obsY - truefun(Xgrid3,obsZ)
+        }
       }
 
       if(requireNamespace("plotly", quietly = TRUE) && (plot3D==TRUE)){ #!plotly
@@ -118,9 +130,10 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
 
         cat("Plotting with plotly. This can take several seconds\n")
         p <- plotly::plot_ly(showscale = FALSE, type = "surface")
-
-        p <- plotly::add_trace(p,x = obsX,  y = c(obsZ), z = c(obsY), mode = "markers", type = "scatter3d",
-                               marker = list(size = 5, color = "red", symbol = 104),inherit=FALSE)
+        if(show.training){
+          p <- plotly::add_trace(p,x = obsX,  y = c(obsZ), z = c(obsY), mode = "markers", type = "scatter3d",
+                               marker = list(size = 5, color = "red", symbol = 104),inherit=FALSE,name="Observations")
+        }
         p <- plotly::layout(p,
             title = paste0("Marginal effect of Z conditional on ",nXcol," and median covariates"),
             scene = list(
@@ -140,13 +153,16 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
 
         g <- ggplot2::ggplot(data.frame(x=grid$X,y=grid$Z,z=grid$Y), ggplot2::aes(x=x,y=y)) +
           ggplot2::geom_tile(ggplot2::aes(fill=z)) +
-          ggplot2::scale_fill_gradient2(low=Blue100, high=Vermillion100,name=y.label) +
-          ggplot2::geom_point(data=data.frame(xobs=obsX,yobs=obsZ,zobs=1),ggplot2::aes(x = xobs, y = yobs),
-                              pch = 21,inherit.aes = FALSE,show.legend=TRUE) +
-          ggplot2::scale_x_continuous(name=paste0("Control ",nXcol),expand=c(0,0)) +
+          ggplot2::scale_fill_gradient2(low=Blue100, high=Vermillion100,name=y.label)
+        if(show.training){
+          g <- g + ggplot2::geom_point(data=data.frame(xobs=obsX,yobs=c(obsZ)),ggplot2::aes(x = xobs, y = yobs),
+                              pch = 21,inherit.aes = FALSE,show.legend=TRUE)
+        }
+
+        g <- g + ggplot2::scale_x_continuous(name=paste0("Control ",nXcol),expand=c(0,0)) +
           ggplot2::scale_y_continuous(name="Basis Expanded Z",expand=c(0,0)) +
           ggplot2::theme_minimal()
-        if((sign(grid$Y)!=sign(grid$Y)) && marginal==TRUE ){
+        if( (sign(min(grid$Y))!=sign(max(grid$Y))) && (marginal==TRUE) ){
           #plot 0-line if the range of the marginal output is zero-crossing
           g <- g + ggplot2::geom_contour(bins=1,col="black",ggplot2::aes(z=z),lty=2)
         }
@@ -175,7 +191,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
                                  col=filled.contour.cols, levels=filled.contour.lvls,
                                  plot.axes = { axis(1)
                                                axis(2)
-                                               points(obsX, obsZ,cex=0.5) })
+                                               if(show.training){points(obsX, obsZ,cex=0.5)} })
       }
     } else { #if not column of X selected
       cat("No column of X selected. Proceeding with 2D plot with respect to Z\n")
@@ -189,7 +205,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
       Ygrid <- surface$map
       YgridL <- surface$ci[,1]
       YgridU <- surface$ci[,2]
-      if(!marginal){
+      if(!marginal && show.training){
         obsY <- object$train_data$y * object$moments[1,2]       + object$moments[1,1]
         obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
         y_limit <- c(min(YgridL,obsY),max(YgridU,obsY))
@@ -206,38 +222,75 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,Xlim = c(-1,1)
       polygon(c(Zgrid, rev(Zgrid)),c(YgridL,rev(YgridU)),col = Vermillion50, border = FALSE)
     }
   } else {
+    #Binary Z
+    if(plot3D){cat("No 3D plot available for binary Z\n")}
+
+    if(missing(truefun)){
+      if(marginal==TRUE){
+        y.label <- "Y(x,1) - Y(x,0)"
+      } else {
+        y.label <- "Outcome Y"
+      }
+    } else {
+      if(marginal==TRUE){
+        y.label <- "Y(x,1) - Y(x,0)"
+      } else {
+        y.label <- "Outcome Y"
+      }
+    }
 
     if(!missing(Xcol)){
       cat("Proceeding to plot binary Z\n")
 
       obsZ <- object$train_data$Z
-      ngrid <- nx
-      Xgrid2 <- t(matrix(rep(medX,nx),px,ngrid))
+      Xgrid2 <- t(matrix(rep(medX,nx),px,nx))
       Xgrid2[,Xcol] <- Xgrid
 
-      if(marginal==FALSE){
+      if(marginal){
+        #one curve ("treatment effect")
+        cat("Predicting", n, "grid points\n")
+        surface <- predict(object,matrix(Xgrid2),0,marginal=TRUE) #Z does not matter
+
+        y_limit <- c(min(surface$ci[,1]),max(surface$ci[,2]))
+
+        graphics::plot(Xgrid,surface$map,col=BlueishGreen100,lwd=2,ylim=y_limit,type="l",xlab=paste0("Control ",nXcol),ylab=y.label)
+        graphics::polygon(c(Xgrid,rev(Xgrid)),c(surface$ci[,1],rev(surface$ci[,2])),col=BlueishGreen50,density=20)
+        if(!missing(truefun)){
+          graphics::lines(Xgrid, truefun(matrix(Xgrid2)),lty=2)
+        }
+        if(show.training){
+          graphics::points(obsX[obsZ==0],rep(y_limit[1],sum(obsZ==0)),pch=21,cex=0.6)
+          graphics::points(obsX[obsZ==1],rep(y_limit[2],sum(obsZ==1)),pch=20,cex=0.6)
+        }
+      } else {
         #two curves
+        surface0 <- predict(object,matrix(Xgrid2),0,marginal=FALSE)
+        surface1 <- predict(object,matrix(Xgrid2),1,marginal=FALSE)
 
-        surface0 <- predict(object,Xgrid2,0,marginal=FALSE)
-        surface1 <- predict(object,Xgrid2,1,marginal=FALSE)
+        if(show.training){
+          y_limit <- c(min(surface0$ci[,1],surface1$ci[,1],obsY),
+                       max(surface0$ci[,2],surface1$ci[,2],obsY))
+        } else {
+          y_limit <- c(min(surface0$ci[,1],surface1$ci[,1]),
+                       max(surface0$ci[,2],surface1$ci[,2]))
+        }
 
-        graphics::plot(Xgrid,surface0$map,col=Blue100,lwd=2)
+        graphics::plot(Xgrid,surface0$map,col=Blue100,lwd=2,ylim=y_limit,type="l",xlab=paste0("Control ",nXcol),ylab=paste0(y.label," (blue: Z=1,red: Z=0)"))
         graphics::polygon(c(Xgrid,rev(Xgrid)),c(surface0$ci[,1],rev(surface0$ci[,2])),col=Blue50,density=20)
         graphics::lines(Xgrid,surface1$map,col=Vermillion100,lwd=2)
         graphics::polygon(c(Xgrid,rev(Xgrid)),c(surface1$ci[,1],rev(surface1$ci[,2])),col=Vermillion50,density=20)
         if(!missing(truefun)){
-          graphics::lines(Xgrid,truefun(Xgrid,rep(0,nx)),lty=2)
-          graphics::lines(Xgrid,truefun(Xgrid,rep(0,nx)),lty=2)
+          graphics::lines(Xgrid,truefun((Xgrid2),rep(0,nx)),lty=2)
+          graphics::lines(Xgrid,truefun((Xgrid2),rep(1,nx)),lty=2)
         }
-
-      } else {
-        cat("Predicting", n, "grid points\n")
-        surface <- predict(object,Xgrid2,grid$Z,marginal=TRUE)
-
+        if(show.training){
+          graphics::points(obsX[obsZ==0],rep(y_limit[1],sum(obsZ==0)),pch=21,cex=0.6)
+          graphics::points(obsX[obsZ==1],rep(y_limit[2],sum(obsZ==1)),pch=20,cex=0.6)
+        }
       }
-
     } else {
       cat("No plot produced, need to specify an X-column for binary Z")
+      FALSE
     }
 
   }

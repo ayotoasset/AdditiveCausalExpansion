@@ -22,21 +22,27 @@
 #' set.seed(1231)
 #' n <- 120
 #' Z <- rbinom(n, 1, 0.3)
-#' X1 <- runif(sum(Z), min = 20, max = 40)
-#' X0 <- runif(n-sum(Z), min = 20, max = 40)
+#' X1 <- rnorm(sum(Z), mean = 30,sd = 10)
+#' X0 <- rnorm(n-sum(Z), mean = 20, sd = 10)
 #' X <- matrix(NaN,n,1)
 #' X[Z==1,] <- X1; X[Z==0,] <- X0
 #' sort.idx <- sort(X,index.return=TRUE)$ix
-#' y0_true <- as.matrix(72 + 3 * sqrt(X))
-#' y1_true <- as.matrix(90 + exp(0.06 * X))
+#' y_truefun <- function(x,z) {mat0 <- matrix(72 + 3 * (x[z==0,]>0)*sqrt(abs(x[z==0,])),sum(z==0),1); mat1 <- matrix(90 + exp(0.06 * x[z==1,]),sum(z==1),1) ; mat <- matrix(NaN,length(z),1); mat[z==0,1] <- mat0; mat[z==1,1] <- mat1; c(mat) }
+#' y0_true <- y_truefun(X,rep(0,n))
+#' y1_true <- y_truefun(X,rep(1,n))
 #' Y0 <- rnorm(n, mean = y0_true, sd = 1)
 #' Y1 <- rnorm(n, mean = y1_true, sd = 1)
 #' Y <- Y0*(1-Z) + Y1*Z
-#' my.GPS <- GPspline.train(Y,X,Z,myoptim="Nadam",learning_rate=0.01)
+#' my.GPS <- GPspline.train(Y,X,Z,myoptim="GD",learning_rate=0.0001)
 #' #print (sample) average treatment effect (ATE)
 #' predict(my.GPS,marginal=TRUE,causal=TRUE)$ate_map
 #' #true ATE
 #' mean(y1_true-y0_true)
+#' #plot response curves
+#' plot(my.GPS,1,marginal=FALSE,truefun=y_truefun)
+#' #plot treatment curve
+#' treat_truefun <- function(x) {y_truefun(x,rep(1,nrow(x))) - y_truefun(x,rep(0,nrow(x)))}
+#' plot(my.GPS,1,marginal=TRUE,truefun=treat_truefun)
 #'
 #' #continuous Z
 #' set.seed(1234)
@@ -68,14 +74,14 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
   else if(length(c(Z))==n ) { pz <- 1; }
   else { stop("Dimension/filetype of Z invalid.\n") }
 
-  X <- matrix(as.numeric(X))
+  X.intern <- as.matrix(X)
   if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
   Z <- matrix(as.numeric(Z))
-  if( !all(dim(X)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
+  if( !all(dim(X.intern)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
   if( !all(dim(Z)==c(n,pz)) ) stop("Dimension of Z not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
 
   #normalize variables
-  moments <- normalize_train(y,X,Z)
+  moments <- normalize_train(y,X.intern,Z)
 
   #check whether Z is univariate
   if( pz > 1 ) isuniv = FALSE else isuniv = TRUE
@@ -146,7 +152,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 
   structure(list(Kernel = myKernel, Spline=mySpline,
                  moments=moments,
-                 train_data=list(y = y,X = X,Z = Z, Zbinary = isbinary)),
+                 train_data=list(y = y,X = X.intern,Z = Z, Zbinary = isbinary)),
                  class = "GPspline")
 }
 
@@ -169,17 +175,19 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 #' set.seed(1234)
 #' n2 <- 300
 #' df <- data.frame(x = runif(n2, min = 1, max = 2))
+#' df$x2 <- runif(n2, min = -1, max = 1)
 #' df$z = rnorm(n2, exp(df$x)-14, 1)
-#' y_truefun <- function(x,z) {as.matrix(3 * sqrt(x) * ((z+8)^2 - 2*z))}
-#' y2_true <- y_truefun(df$x,df$z)
+#' y_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * ((z+8)^2 - 2*z))}
+#' y2_true <- y_truefun(df[,c("x","x2")],df$z)
 #' df$y <- rnorm(n2, mean = y2_true, sd = 1)
-#' my.GPS <- GPspline(y ~ x | z,data=df,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
+#' my.GPS <- GPspline(y ~ x + x2 | z,data=df,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=2)
 #' my.pred <- predict(my.GPS)
 #' plot(df$y,my.pred$map); abline(0,1,lty=2)
-#' #comparison with the true curve:
-#' plot(my.GPS,marginal=FALSE,plotly=TRUE,truefun = y_truefun)
-#' #plotting of the marginal curve:
-#' plot(my.GPS,marginal=TRUE,plotly=TRUE)
+#' #prediction of the curve
+#' plot(my.GPS,"x2",marginal=FALSE,plot3D=TRUE,plot.training=TRUE)
+#' #difference to the true marginal curve:
+#' marg_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * (2*(z+8) - 2))}
+#' plot(my.GPS,"x2",marginal=TRUE,plot.training=TRUE,truefun=marg_truefun)
 
 GPspline <- function(formula,data,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.001,beta1=0.9,beta2=0.999,momentum=0.0){
   myformula <- Formula(formula)
