@@ -18,7 +18,7 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
     tmp = sum(pow(arma::unique( X.col(i) ),0));
     isbinary(i) = moments(i+1,2) = (tmp <= 2); // ugly but works
     if(tmp==1){
-      Rcout << "Column " << i << " of X is constant." << std::endl;
+      Rcout << "Column " << i+1 << " of X is constant." << std::endl;
       X.col(i).zeros();
     }
   }
