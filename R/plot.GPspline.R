@@ -4,7 +4,7 @@
 #' @param Xcol Either numeric or character, the latter only works if the training was done with a data.frame (i.e. not GPspline.train). If missing plots the 2D graph of Y on Z.
 #' @param marginal A logical statement, default: \code{FALSE}. If \code{TRUE}, plots the marginal surface of the response surface Y with respect to the basis expanded model Z using average X.
 #' @param plot3D A logical statemnt whether a three-dimensional plot should be produced. This is only valid if an X-column is selected and the plotly package is installed.
-#' @param show.training A logical
+#' @param show.observations A logical
 #' @param Xlim A two-dimensional vector
 #' @param Xstep A scalar
 #' @param Zlim A two-dimensional vector
@@ -14,9 +14,8 @@
 #' @return Returns the plotly object
 
 
-plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
+plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
   #For the colors see http://jfly.iam.u-tokyo.ac.jp/color/#what
-
   Blue100    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-0)*255/100)
   Blue50    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-50)*255/100)
   BlueishGreen50 <- grDevices::rgb(0, 158, 115, max=255, alpha = (100-50)*255/100)
@@ -25,8 +24,6 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
   Orange100  <- grDevices::rgb(230, 159, 0, max=255, alpha = (100-0)*255/100)
   Vermillion50  <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-50)*255/100)
   Vermillion100 <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-0)*255/100)
-
-
 
   px <- ncol(object$train_data$X)
   pz <- 1
@@ -62,13 +59,15 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
     Xgrid <- seq(min(Xlim),max(Xlim),by=Xstep) * object$moments[1+Xcol,2] + object$moments[1+Xcol,1]
   }
 
-  if(show.training){
+  if(show.observations){
     obsX <- object$train_data$X[,Xcol] * object$moments[1+Xcol,2]+ object$moments[1+Xcol,1]
     obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
     obsY <- object$train_data$y * object$moments[1,2] + object$moments[1,1]
   }
 
   if(!object$train_data$Zbinary){
+    if(marginal && show.observations){ cat("Observations for marginal predictions use predicted value as the true marginal is not observed\n") }
+
     if(missing(truefun)){
       if(marginal==TRUE){
         y.label <- "Marginal Y"
@@ -76,6 +75,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
         y.label <- "Outcome Y"
       }
     } else {
+      if(show.observations){ cat("True values subtracted from Observations\n") }
       if(marginal==TRUE){
         y.label <- "Diff. to true marg. Y"
       } else {
@@ -99,7 +99,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
       cat("Predicting", nz, "x",  nx, "grid points\n")
       surface <- predict(object,as.matrix(Xgrid2),grid$Z,marginal=marginal)
 
-      if(marginal && show.training){
+      if(marginal && show.observations){
         invisible(capture.output(obsY <- predict(object,marginal=TRUE)$map)) #surpress output as it is expected
       }
 
@@ -116,7 +116,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
         gridL$Y <- surface$ci[,1] - true
         gridU$Y <- surface$ci[,2] - true
 
-        if(show.training==TRUE){
+        if(show.observations==TRUE){
           Xgrid3 <- t(matrix(rep(medX,length(obsZ)),px,length(obsZ)))
           Xgrid3[,Xcol] <- obsX
           obsY <- obsY - truefun(Xgrid3,obsZ)
@@ -130,7 +130,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
 
         cat("Plotting with plotly. This can take several seconds\n")
         p <- plotly::plot_ly(showscale = FALSE, type = "surface")
-        if(show.training){
+        if(show.observations){
           p <- plotly::add_trace(p,x = obsX,  y = c(obsZ), z = c(obsY), mode = "markers", type = "scatter3d",
                                marker = list(size = 5, color = "red", symbol = 104),inherit=FALSE,name="Observations")
         }
@@ -154,7 +154,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
         g <- ggplot2::ggplot(data.frame(x=grid$X,y=grid$Z,z=grid$Y), ggplot2::aes(x=x,y=y)) +
           ggplot2::geom_tile(ggplot2::aes(fill=z)) +
           ggplot2::scale_fill_gradient2(low=Blue100, high=Vermillion100,name=y.label)
-        if(show.training){
+        if(show.observations){
           g <- g + ggplot2::geom_point(data=data.frame(xobs=obsX,yobs=c(obsZ)),ggplot2::aes(x = xobs, y = yobs),
                               pch = 21,inherit.aes = FALSE,show.legend=TRUE)
         }
@@ -191,7 +191,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
                                  col=filled.contour.cols, levels=filled.contour.lvls,
                                  plot.axes = { axis(1)
                                                axis(2)
-                                               if(show.training){points(obsX, obsZ,cex=0.5)} })
+                                               if(show.observations){points(obsX, obsZ,cex=0.5)} })
       }
     } else { #if not column of X selected
       cat("No column of X selected. Proceeding with 2D plot with respect to Z\n")
@@ -205,7 +205,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
       Ygrid <- surface$map
       YgridL <- surface$ci[,1]
       YgridU <- surface$ci[,2]
-      if(!marginal && show.training){
+      if(!marginal && show.observations){
         obsY <- object$train_data$y * object$moments[1,2]       + object$moments[1,1]
         obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
         y_limit <- c(min(YgridL,obsY),max(YgridU,obsY))
@@ -258,7 +258,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
         if(!missing(truefun)){
           graphics::lines(Xgrid, truefun(matrix(Xgrid2)),lty=2)
         }
-        if(show.training){
+        if(show.observations){
           graphics::points(obsX[obsZ==0],rep(y_limit[1],sum(obsZ==0)),pch=21,cex=0.6)
           graphics::points(obsX[obsZ==1],rep(y_limit[2],sum(obsZ==1)),pch=20,cex=0.6)
         }
@@ -267,7 +267,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
         surface0 <- predict(object,matrix(Xgrid2),0,marginal=FALSE)
         surface1 <- predict(object,matrix(Xgrid2),1,marginal=FALSE)
 
-        if(show.training){
+        if(show.observations){
           y_limit <- c(min(surface0$ci[,1],surface1$ci[,1],obsY),
                        max(surface0$ci[,2],surface1$ci[,2],obsY))
         } else {
@@ -283,7 +283,7 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.training=
           graphics::lines(Xgrid,truefun((Xgrid2),rep(0,nx)),lty=2)
           graphics::lines(Xgrid,truefun((Xgrid2),rep(1,nx)),lty=2)
         }
-        if(show.training){
+        if(show.observations){
           graphics::points(obsX[obsZ==0],rep(y_limit[1],sum(obsZ==0)),pch=21,cex=0.6)
           graphics::points(obsX[obsZ==1],rep(y_limit[2],sum(obsZ==1)),pch=20,cex=0.6)
         }

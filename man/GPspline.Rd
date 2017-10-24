@@ -53,8 +53,8 @@ my.GPS <- GPspline(y ~ x + x2 | z,data=df,myoptim="GD",learning_rate = 0.0001,sp
 my.pred <- predict(my.GPS)
 plot(df$y,my.pred$map); abline(0,1,lty=2)
 #prediction of the curve
-plot(my.GPS,"x2",marginal=FALSE,plot3D=TRUE,plot.training=TRUE)
+plot(my.GPS,"x2",marginal=FALSE,plot3D=TRUE)
 #difference to the true marginal curve:
 marg_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * (2*(z+8) - 2))}
-plot(my.GPS,"x2",marginal=TRUE,plot.training=TRUE,truefun=marg_truefun)
+plot(my.GPS,"x2",marginal=TRUE,show.observations=TRUE,truefun=marg_truefun)
 }

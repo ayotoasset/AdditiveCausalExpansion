@@ -5,8 +5,8 @@
 \title{Plot marginal effect.}
 \usage{
 \method{plot}{GPspline}(object, Xcol, marginal = FALSE, plot3D = FALSE,
-  show.training = TRUE, Xlim = c(-1, 1), Xstep = 0.1, Zlim = c(-1, 1),
-  Zstep = 0.1, truefun)
+  show.observations = TRUE, Xlim = c(-1, 1), Xstep = 0.1, Zlim = c(-1,
+  1), Zstep = 0.1, truefun)
 }
 \arguments{
 \item{object}{An "GPspline" object from the GPspline function}
@@ -17,7 +17,7 @@
 
 \item{plot3D}{A logical statemnt whether a three-dimensional plot should be produced. This is only valid if an X-column is selected and the plotly package is installed.}
 
-\item{show.training}{A logical}
+\item{show.observations}{A logical}
 
 \item{Xlim}{A two-dimensional vector}
 
