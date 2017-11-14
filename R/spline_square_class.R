@@ -10,7 +10,7 @@ square_spline <- setRefClass("square_spline",
 
                                  #generate matrices without intercept!
                                  B <<- matrix(c(Z,Z^2),n,2)
-                                 dB <<- matrix(c(rep(1,n),Z) ,n,2) # 0 -> 1
+                                 dB <<- matrix(c(rep(1,n),2*Z) ,n,2) # 0 -> 1
 
                                  B
                                },
@@ -19,7 +19,7 @@ square_spline <- setRefClass("square_spline",
                                  if(!missing(Znew)){
                                    n <- length(Znew)
                                    Bnew <- matrix(c(Znew,Znew^2),n,2)
-                                   dBnew <- matrix(c(rep(1,n),Znew) ,n,2)
+                                   dBnew <- matrix(c(rep(1,n),2*Znew) ,n,2)
                                  } else {
                                    #return stored matrices
                                    Bnew <- matrix(B)
