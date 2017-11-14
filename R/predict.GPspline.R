@@ -44,11 +44,19 @@ predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE)
                                        newX.intern, object$Spline$testbasis(newZ.intern)$B,
                                        object$moments[1,1],object$moments[1,2])
   } else {
-    pred_list <- object$Kernel$predict_marginal(object$train_data$y,
-                                             object$train_data$X,
-                                             object$Spline$B,
-                                             newX.intern, object$Spline$testbasis(newZ.intern)$dB,
-                                             object$moments[1,1],object$moments[1,2],(isbinary && causal))
+    if(class(object$Kernel)=="SqExpNonAddKernel"){
+      pred_list <- object$Kernel$predict_marginal(object$train_data$y,
+                                                  object$train_data$X,
+                                                  object$Spline$B,
+                                                  newX.intern, newZ.intern,
+                                                  object$moments[1,1],object$moments[1,2],(isbinary && causal))
+    } else {
+      pred_list <- object$Kernel$predict_marginal(object$train_data$y,
+                                              object$train_data$X,
+                                              object$Spline$B,
+                                              newX.intern, object$Spline$testbasis(newZ.intern)$dB,
+                                              object$moments[1,1],object$moments[1,2],(isbinary && causal))
+    }
   }
   pred_list
 }

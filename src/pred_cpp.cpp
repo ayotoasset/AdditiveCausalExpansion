@@ -45,12 +45,21 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
   arma::mat ci(nx,2);
   arma::mat tmp(nx,nX);
 
-  arma::mat Kmarg_xX(nx,nX); Kmarg_xX = K_xX.slice(1);
-  arma::mat Kmarg_xx(nx,nx); Kmarg_xx = K_xx.slice(1);
-  for(unsigned int b = 2; b < B; b++){ // not the "constant" nuisance term and b=1
-    Kmarg_xX += K_xX.slice(b);
-    Kmarg_xx += K_xx.slice(b);
+  arma::mat Kmarg_xX(nx,nX);
+  arma::mat Kmarg_xx(nx,nx);
+
+  if(B!=1){ //non-additive kernel (regular GP)
+    Kmarg_xX = K_xX.slice(1);
+    Kmarg_xx = K_xx.slice(1);
+    for(unsigned int b = 2; b < B; b++){ // not the "constant" nuisance term and b=1
+      Kmarg_xX += K_xX.slice(b);
+      Kmarg_xx += K_xx.slice(b);
+    }
+  } else {
+    Kmarg_xX = K_xX.slice(0);
+    Kmarg_xx = K_xx.slice(0);
   }
+
   //invK_XX.diag() = invK_XX.diag() + 0.00001;
   tmp = Kmarg_xX * invK_XX;
   y_x = std_y * tmp * (y_X - mu);

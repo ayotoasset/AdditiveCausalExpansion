@@ -49,9 +49,11 @@
 #' n2 <- 200
 #' X2 <- matrix(runif(n2, min = 1, max = 2))
 #' Z2 <- rnorm(n2, exp(X2)-14, 1)
-#' y_truefun <- function(x,z) {as.matrix(sqrt(x) * 3 * ((z+8)^2 - 2*z))}
+#' y_truefun <- function(x,z) {as.matrix(40 + 2*exp(x) + sqrt(x) * 3 * ((z+8)^2 - 2*z))}
+#' marg_truefun <- function(x,z) {as.matrix(sqrt(x) * 3 * (2*(z+8) - 2))}
 #' y2_true <- y_truefun(X2,Z2)
 #' Y2 <- rnorm(n2, mean = y2_true, sd = 1)
+#' marg_true <- marg_truefun(X2,Z2)
 #' my.GPS <- GPspline.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
 #' my.pred <- predict(my.GPS)
 #' #quality of prediction
@@ -89,13 +91,27 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
   if( isbinary <- (length(unique(c(Z))) == 2) ) {cat("Binary Z detected\n"); spline = "binary"}
   else {cat("Non-Binary Z detected\n"); isbinary = FALSE}
 
+  #Gaussian Process kernel (only SE implemented)
+  if (kernel == "Matern") {
+    #myKernel <- KernelClass_Matern$new(px = px,pz = pz)
+  } else if(kernel == "Polynomial") {
+    #myKernel <- KernelClass_Poly$new(px = px,pz = pz)
+  } else if(kernel == "SEiso"){
+    cat("Using isotropic SE kernel (treats each basis dimension equally)\n"); myKernel <- KernelClass_SE_iso$new()
+  } else if(kernel == "nonaddSE"){
+    cat("Using non-additive SE kernel (regular GP)\n"); myKernel <- KernelClass_SE_nonadd$new()
+    cat("Only linear spline supported for regular GP features\n"); spline <- "linear"
+  } else {
+    cat("Using SE kernel\n"); myKernel <- KernelClass_SE$new()
+  }
+
   #### select chosen spline or appropriate based on data ###
   if( isuniv && ((isbinary && (spline == "binary")) || (spline=="linear"))) {
     cat("Using binary/linear-basis\n");  mySpline <- linear_spline$new()  }
   else if( isuniv && (spline == "B") ) {
     cat("Using B-spline\n"); mySpline <- B_spline$new()  }
   else if( isuniv && (spline == "square") ) {
-    cat("Using square-basis\n"); mySpline <- square_spline$new()   }
+    cat("Using square-basis\n"); mySpline <- square_spline$new() }
   else if( isuniv && (spline == "cubic") ) {
     cat("Using cubic-basis\n"); mySpline <- ns_spline$new(); n.knots=0;}
   else if( isuniv ){
@@ -103,17 +119,6 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 
   #generate basis
   mySpline$trainbasis(Z,n.knots) #binary "spline" discards n_knots
-
-  #Gaussian Process kernel (only SE implemented)
-  if (kernel == "Matern") {
-    #myKernel <- KernelClass_Matern$new(px = px,pz = pz)
-  } else if(kernel == "Polynomial") {
-    #myKernel <- KernelClass_Poly$new(px = px,pz = pz)
-  } else if(kernel == "SEiso"){
-    cat("Using isotropic SE kernel\n"); myKernel <- KernelClass_SE_iso$new()
-  } else {
-    cat("Using SE kernel\n"); myKernel <- KernelClass_SE$new()
-  }
 
   #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
   myKernel$parainit(y,p=px,mySpline$dim())
