@@ -1,4 +1,3 @@
-
 ## define optimizer classes
 optAdam <- setRefClass("AdamOpt",
                        fields = list(m = "vector",
@@ -46,4 +45,18 @@ optNesterov <- setRefClass("NesterovOpt",
                              initOpt = function(KernelObj){
                                nu <<- KernelObj$parameters*0; #same structure
                              })
+)
+
+optNewton <- setRefClass("NewtonOpt",
+                         fields = list(nu = "vector",
+                                       lr = "numeric",
+                                       momentum = "numeric"),
+                         methods = list(
+                           update = function(iter,parameters,gradients,Hessian=diag(length(momentum))) {
+                             if(Newton_cpp(iter,lr,momentum,nu,gradients,Hessian,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
+                             parameters
+                           },
+                           initOpt = function(KernelObj){
+                             nu <<- KernelObj$parameters*0
+                           })
 )
