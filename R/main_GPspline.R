@@ -109,8 +109,10 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
     #myKernel <- KernelClass_Matern$new(px = px,pz = pz)
   } else if(kernel == "Polynomial") {
     #myKernel <- KernelClass_Poly$new(px = px,pz = pz)
+  } else if(kernel == "SEiso"){
+    cat("Using isotropic SE kernel\n"); myKernel <- KernelClass_SE_iso$new()
   } else {
-    myKernel <- KernelClass_SE$new()
+    cat("Using SE kernel\n"); myKernel <- KernelClass_SE$new()
   }
 
   #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
@@ -123,6 +125,8 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
     } else {
       myOptimizer = optNadam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2)
     }
+  } else if(myoptim=="Newton"){
+    myOptimizer = optNewton$new(lr = learning_rate, momentum = momentum)
   } else if(myoptim=="GD" || myoptim=="Nesterov"){
     if(myoptim=="GD"){ momentum=0.0 }
     myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum)
