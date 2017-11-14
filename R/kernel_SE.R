@@ -37,10 +37,14 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      Karray <<- Klist$elements
                                      Klist
                                    },
-                                   getinv_kernel = function(X,Z) {
+                                   getinv_kernel = function(X,Z,noeigen=FALSE) {
                                      #get matrices and return inverse for prediction
                                      kernel_mat_sym(X,Z)
-                                     invKmatList <- invkernel_cpp(Kmat,c(parameters[1])) #no error handling, return eigenvalues!
+                                     if(noeigen){
+                                       invKmatList <- invkernel_no_eigen_cpp(Kmat,c(parameters[1]))
+                                     } else {
+                                       invKmatList <- invkernel_cpp(Kmat,c(parameters[1])) #no error handling, return eigenvalues!
+                                     }
                                      invKmatn <<- invKmatList$inv
                                      invKmatList
                                    },
@@ -50,7 +54,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      invKmatList <- getinv_kernel(X,Z);
                                      gradients <- grad_SE_cpp(y,X,Z,Kmat,Karray,invKmatn,invKmatList$eigenval,
                                                               parameters,
-                                                              stats)
+                                                              stats,B)
 
                                      parameters <<- Optim$update(iter,parameters,gradients)
                                      mean_solution(y) #overwrites mu gradient update

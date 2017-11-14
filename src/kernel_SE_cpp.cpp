@@ -49,6 +49,7 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,const arma::mat& X2,const arma::ma
 }
 
 //more efficient with pointers and a class but well
+
 arma::mat uppertri2symmat(arma::vec matvec,unsigned int dim){
   arma::mat out(dim,dim);
   unsigned int cnt = 0;
@@ -113,6 +114,21 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X, const arma::mat& Z, cons
 
 
 // [[Rcpp::export]]
+Rcpp::List invkernel_no_eigen_cpp(arma::mat pdmat, const double sigma){
+  unsigned int n = pdmat.n_cols;
+  arma::vec eigval(n); eigval.ones();
+  arma::mat eigvec(n,n); eigvec.eye();
+  pdmat.diag() += exp(sigma);
+
+  //arma::mat invKmat(n,n);
+  if(inv_sympd( pdmat, pdmat )){
+    Rcout << "Inverse of Kernel not completed." << std::endl;
+  }
+  return Rcpp::List::create(_("eigenval") = 0,
+                            _("inv") = pdmat);
+}
+
+// [[Rcpp::export]]
 Rcpp::List invkernel_cpp(arma::mat pdmat, const double sigma){
   unsigned int n = pdmat.n_cols;
   arma::vec eigval(n); eigval.ones();
@@ -120,20 +136,20 @@ Rcpp::List invkernel_cpp(arma::mat pdmat, const double sigma){
   pdmat.diag() += exp(sigma);
 
   if(!arma::eig_sym( eigval, eigvec, pdmat)){
-    Rcout << "Eigenvalue decomp. not completed." << std::endl;
+  Rcout << "Eigenvalue decomp. not completed." << std::endl;
   }
 
   //get inverse and eigenvalues
   arma::mat invKmat(n,n);
   invKmat = eigvec;
   for(unsigned int i = 0; i < n; i++){
-    invKmat.col(i) = invKmat.col(i) / eigval[i];
+  invKmat.col(i) = invKmat.col(i) / eigval[i];
   }
   invKmat = invKmat * eigvec.t();
 
   if( eigval[0]<=0 ){
-    Rcout << "Smallest eigenvalue is negative or zero! - This should not happen as sigma puts a lower bound on the eigenvalues." << std::endl;
-    Rcout << "Sigma^2: " << exp(sigma) << std::endl;
+  Rcout << "Smallest eigenvalue is negative or zero! - This should not happen as sigma puts a lower bound on the eigenvalues." << std::endl;
+  Rcout << "Sigma^2: " << exp(sigma) << std::endl;
   }
 
   return Rcpp::List::create(_("eigenval") =  eigval,
@@ -164,7 +180,7 @@ arma::mat evid_scale_gradients(const arma::mat& X, const arma::mat& Kaa, const a
     }
     for(unsigned int b=0; b < B; b++){
       // replace parameter with its gradient
-      L[b + B*i] = - 0.5 * arma::trace( Kaa * (K.slice(b) % tmpX) * exp( - L[b + B*i] ) );
+      L[b + B*i] = - 0.5 * arma::trace( Kaa * (K.slice(b) % tmpX)) * exp( - L[b + B*i] );
     }
   }
   return L;
@@ -175,15 +191,16 @@ arma::mat evid_scale_gradients(const arma::mat& X, const arma::mat& Kaa, const a
 arma::vec grad_SE_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
                           arma::mat& Kfull, arma::cube& K, arma::mat& invKmatn, arma::vec& eigenval,
                           const arma::vec& parameters,
-                          arma::vec& stats) {
+                          arma::vec& stats, const unsigned int& B) {
 
   unsigned int n = X.n_rows;
   unsigned int px = X.n_cols;
-  unsigned int B = Z.n_cols+1;
-
+  //unsigned int B = Z.n_cols+1;
+  /*
   if(B != ((parameters.size()-2)/(px+1)) ) {
     throw std::range_error("Inconsistent parameter vector dimensions.");
   }
+  */
 
   arma::vec gradients(parameters.size());
 
@@ -213,105 +230,53 @@ arma::vec grad_SE_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
   stats(0) = pow(arma::norm(ybar - (Kfull * alpha)),2);
   //Evidence
   stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + sum(log(eigenval)) + arma::dot( ybar, alpha ) ) ;
+
+
   //stats is returned as a reference
 
   return gradients;
 }
 
+//gradients with approximate trace
 // [[Rcpp::export]]
-arma::rowvec stats_SE_cpp(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, arma::vec& eigenval, const double mu) {
-  //Rcpp::List gradients = clone(parameters); //for the same list structure
+arma::vec grad_SE_noML_cpp(arma::vec& y, arma::mat& X, arma::mat& Z,
+                      arma::mat& Kfull, arma::cube& K, arma::mat& invKmatn,
+                      const arma::vec& parameters,
+                      arma::vec& stats, const unsigned int& B) {
 
-  unsigned int n = y.size();
-  //preallocate memory
-  arma::rowvec stats(2);
+  unsigned int n = X.n_rows;
+  unsigned int px = X.n_cols;
+
+  arma::vec gradients(parameters.size());
+
+  arma::colvec ybar(n);
   arma::colvec alpha(n);
+  arma::mat tmpK(n,n);
 
-  y = y - mu; //
-  alpha = invKmatn * y;
+  ybar = y - parameters[1];
+  alpha = invKmatn * ybar;
+  tmpK = invKmatn - alpha * alpha.t();
+
+  //sigma
+  gradients[0] = - 0.5 * arma::sum( tmpK.diag() ) * exp( parameters[0] ); // thus avoid allocating dK
+
+  //lambda
+  for(unsigned int b=0;b<B;b++){
+    gradients[2+b] = evid_grad(tmpK, K.slice(b));
+  }
+
+  //L
+  gradients.rows(2+B,1+B*(px+1)) = evid_scale_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), B);
+
+  //mu - gradient approach
+  gradients[1]=0; //arma::sum( invKmatn * ybar )
 
   //RMSE
-  stats(0) = pow(arma::norm(y - (Kmat * alpha)),2);
+  stats(0) = pow(arma::norm(ybar - (Kfull * alpha)),2);
   //Evidence
-  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + sum(log(eigenval)) + arma::dot( y, alpha ) ) ;
+  stats(1) = datum::nan;
 
-  return stats;
-}
+  //stats is returned as a reference
 
-///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// credible intervals
-// [[Rcpp::export]]
-Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
-                    const arma::mat& invK_XX, arma::mat& K_xX,arma::mat K_xx,
-                    double mean_y, double std_y){
-  unsigned int nx = K_xx.n_rows;
-  unsigned int nX = invK_XX.n_rows;
-
-  arma::vec y_x(nx);
-  arma::mat ci(nx,2);
-  arma::mat tmp(nx,nX);
-
-  tmp = K_xX * invK_XX;
-  y_x = mean_y + std_y * (tmp * (y_X - mu) + mu);
-  //y_x = mean_y + std_y * y_x;
-
-  K_xx = K_xx - tmp * K_xX.t();
-  K_xx.diag() += exp(sigma);
-  //absolute value for nuemric stability
-  ci.col(1) = std_y*1.96 * sqrt(abs(K_xx.diag()));
-  ci.col(0) = y_x - ci.col(1);
-  ci.col(1) = y_x + ci.col(1);
-
-  return Rcpp::List::create(_("map") = y_x,
-                            _("ci") = ci);
-}
-
-// [[Rcpp::export]]
-Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const double mu,
-                             const arma::mat& invK_XX,
-                             const arma::cube& K_xX, const arma::cube& K_xx,
-                             const double& mean_y, const double& std_y,
-                             bool calculate_ate){ // cube argins for x-kernel matrices
-  unsigned int nx = K_xx.slice(0).n_rows;
-  unsigned int nX = invK_XX.n_rows;
-  unsigned int B = K_xx.n_slices;
-
-  arma::vec y_x(nx);
-  arma::mat ci(nx,2);
-  arma::mat tmp(nx,nX);
-
-  arma::mat Kmarg_xX(nx,nX); Kmarg_xX = K_xX.slice(1);
-  arma::mat Kmarg_xx(nx,nx); Kmarg_xx = K_xx.slice(1);
-  for(unsigned int b = 2; b < B; b++){ // not the "constant" nuisance term and b=1
-    Kmarg_xX += K_xX.slice(b);
-    Kmarg_xx += K_xx.slice(b);
-  }
-  //invK_XX.diag() = invK_XX.diag() + 0.00001;
-  tmp = Kmarg_xX * invK_XX;
-  y_x = std_y * tmp * (y_X - mu);
-  //y_x = std_y * y_x;
-
-  Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t(); //saving storage
-
-  //taking absolute value as this can be numerically unstable:
-  ci.col(1) = std_y * 1.96 * sqrt(abs(Kmarg_xx.diag()));
-  ci.col(0) = y_x - ci.col(1);
-  ci.col(1) = y_x + ci.col(1);
-
-  if(!calculate_ate){
-    return Rcpp::List::create(_("map") = y_x,
-                              _("ci") = ci);
-  } else {
-    double ate = arma::mean(y_x);
-    arma::vec ate_ci(2);
-
-    //eficient ci calculation
-    ate_ci(1) = std_y * sqrt(arma::sum(arma::sum(Kmarg_xx))/pow(nx,2));
-    ate_ci(0) = ate - 1.96*ate_ci(1);
-    ate_ci(1) = ate + 1.96*ate_ci(1);
-
-    return Rcpp::List::create(_("map") = y_x,
-                              _("ci") = ci,
-                              _("ate_map") = ate,
-                              _("ate_ci") = ate_ci);
-  }
+  return gradients;
 }
