@@ -23,7 +23,7 @@ Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
   K_xx = K_xx - tmp * K_xX.t();
   K_xx.diag() += exp(sigma);
   //absolute value for nuemric stability
-  ci.col(1) = std_y*1.96 * sqrt(abs(K_xx.diag()));
+  ci.col(1) = std_y * 1.96 * sqrt(abs(K_xx.diag()));
   ci.col(0) = y_x - ci.col(1);
   ci.col(1) = y_x + ci.col(1);
 
@@ -35,7 +35,7 @@ Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
 Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const double mu,
                              const arma::mat& invK_XX,
                              const arma::cube& K_xX, const arma::cube& K_xx,
-                             const double& mean_y, const double& std_y,
+                             const double& mean_y, const double& std_y, const double& std_Z,
                              bool calculate_ate){ // cube argins for x-kernel matrices
   unsigned int nx = K_xx.slice(0).n_rows;
   unsigned int nX = invK_XX.n_rows;
@@ -48,27 +48,31 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
   arma::mat Kmarg_xX(nx,nX);
   arma::mat Kmarg_xx(nx,nx);
 
-  if(B!=1){ //non-additive kernel (regular GP)
+  if(B>1){ //non-additive kernel (regular GP)
     Kmarg_xX = K_xX.slice(1);
     Kmarg_xx = K_xx.slice(1);
-    for(unsigned int b = 2; b < B; b++){ // not the "constant" nuisance term and b=1
-      Kmarg_xX += K_xX.slice(b);
-      Kmarg_xx += K_xx.slice(b);
+    if(B>2){
+      for(unsigned int b = 2; b < B; b++){ // not the "constant" nuisance term and b=1
+        Kmarg_xX += K_xX.slice(b);
+        Kmarg_xx += K_xx.slice(b);
+      }
     }
-  } else {
+  } else if (B==1){
     Kmarg_xX = K_xX.slice(0);
     Kmarg_xx = K_xx.slice(0);
   }
 
   //invK_XX.diag() = invK_XX.diag() + 0.00001;
   tmp = Kmarg_xX * invK_XX;
-  y_x = std_y * tmp * (y_X - mu);
-  //y_x = std_y * y_x;
+  //y_x = std_y * tmp * (y_X - mu);
+  y_x = std_y * tmp * (y_X - mu)/std_Z;
 
   Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t(); //saving storage
 
+  //- 2 dK invK K + dK invK dK
+
   //taking absolute value as this can be numerically unstable:
-  ci.col(1) = std_y * 1.96 * sqrt(abs(Kmarg_xx.diag()));
+  ci.col(1) =  std_y * 1.96 * sqrt(abs(Kmarg_xx.diag()))/std_Z;
   ci.col(0) = y_x - ci.col(1);
   ci.col(1) = y_x + ci.col(1);
 
