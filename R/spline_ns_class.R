@@ -8,7 +8,12 @@ ns_spline <- setRefClass("ns_spline",
                           },
                           trainbasis = function(Z,n_knots) {
                             #internal knots (within unit circle)
-                            IKnots <- quantile(Z,probs = seq(n_knots)/(n_knots+1))
+                            if(n_knots>0){
+                              IKnots <- quantile(Z,probs = seq(n_knots)/(n_knots+1))
+                            } else {
+                              IKnots <- NULL
+                            }
+
                             Boundary.knots <- c(-1,1)
                             myknots <<- c(IKnots,Boundary.knots);
 
