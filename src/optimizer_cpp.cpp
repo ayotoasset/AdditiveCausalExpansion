@@ -23,27 +23,26 @@ bool Nesterov_cpp(double learn_rate, double momentum, arma::vec& nu, arma::vec g
 }
 
 // [[Rcpp::export]]
-bool Newton_cpp(double iter, double learn_rate, double momentum, arma::vec& nu, arma::vec grad, arma::mat Hessian, arma::vec& para){
+bool Newton_cpp(double iter, double learn_rate, double momentum, arma::vec& nu, arma::vec grad, const arma::mat& Hessian, arma::vec& para, const unsigned int& B){
 
   bool output_flag = arma::is_finite(grad); // if all gradients finite
-  // if one element of the Hessian is not finite, use the identity matrix
-  if(arma::is_finite(Hessian)){
-    if(~arma::inv_sympd(Hessian,Hessian)){
-      Rcout << "Hessian not invertible: using identity matrix" << find_nonfinite(grad) << std::endl;
-      Hessian.eye();
-    }
-  }
+
 
   if(output_flag==false){
-    Rcout << "Element that is not finite: " << find_nonfinite(grad) << std::endl;
+    Rcout << "Element of the gradient is not finite: " << find_nonfinite(grad) << std::endl;
     grad.elem( find_nonfinite(grad) ).zeros();}
 
-  //Hessian.diag() += 0.001;
-  nu = momentum * nu + learn_rate * Hessian * grad;
+  grad.rows(2,1+B) = solve(Hessian.submat(2,2,1+B,1+B),grad.rows(2,1+B));
+  for(unsigned int j= 2+B; j < grad.size(); j++){
+    grad(j) = grad(j) / Hessian(j,j);
+  }
+  //grad = solve(Hessian,grad);
+
+
+  nu = momentum * nu + learn_rate * grad;
   para = para + nu;
 
   return output_flag;
-  //return para;
 }
 
 // [[Rcpp::export]]

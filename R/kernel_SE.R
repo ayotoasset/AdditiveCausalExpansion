@@ -52,11 +52,17 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      #update Kmat and invKmat in the class environment
                                      stats <- c(0,0)
                                      invKmatList <- getinv_kernel(X,Z);
-                                     gradients <- grad_SE_cpp(y,X,Z,Kmat,Karray,invKmatn,invKmatList$eigenval,
-                                                              parameters,
-                                                              stats,B)
+                                     if(!Optim$useHessian){
+                                       gradients <- grad_SE_cpp(y,X,Z,Kmat,Karray,invKmatn,invKmatList$eigenval,
+                                                                parameters,stats,B)
+                                       parameters <<- Optim$update(iter,parameters,gradients)
+                                     } else {
+                                       gradlist <- grad_SE_Hessian_cpp(y,X,Z,Kmat,Karray,invKmatn,invKmatList$eigenval,
+                                                                parameters,stats,B)
+                                       #print(gradlist$Hessian)
+                                       parameters <<- Optim$update(iter,parameters,gradlist$gradients,gradlist$Hessian,B)
+                                     }
 
-                                     parameters <<- Optim$update(iter,parameters,gradients)
                                      mean_solution(y) #overwrites mu gradient update
 
                                      if(iter%%100 == 0){ cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1])) }
