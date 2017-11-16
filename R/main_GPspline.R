@@ -48,13 +48,16 @@
 #' set.seed(1234)
 #' n2 <- 200
 #' X2 <- matrix(runif(n2, min = 1, max = 2))
-#' Z2 <- rnorm(n2, exp(X2)-14, 1)
-#' y_truefun <- function(x,z) {as.matrix(40 + 2*exp(x) + sqrt(x) * 3 * ((z+8)^2 - 2*z))}
-#' marg_truefun <- function(x,z) {as.matrix(sqrt(x) * 3 * (2*(z+8) - 2))}
+#' X3 <- matrix(runif(n2, min = 1, max = 2))
+#' X <- data.frame(X2,X3)
+#' Z2 <- rnorm(n2, exp(X2)-10, 1)
+#' y_truefun <- function(x,z) {as.matrix(10*x + (x-1.5) * ((z+9)^2 - 2*z))}
+#' marg_truefun <- function(x,z) {as.matrix( (x-1.5) * (2*(z+9) - 2))}
 #' y2_true <- y_truefun(X2,Z2)
-#' Y2 <- rnorm(n2, mean = y2_true, sd = 1)
+#' Y2 <- rnorm(n2, mean = y2_true, sd = 2)
 #' marg_true <- marg_truefun(X2,Z2)
-#' my.GPS <- GPspline.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=1)
+#' my.GPS <- GPspline.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="cubic",n.knots=1)
+#' plot(my.GPS,1,marginal=F,plot3D=FALSE,truefun=y_truefun)
 #' my.pred <- predict(my.GPS)
 #' #quality of prediction
 #' plot(Y2,my.pred$map); abline(0,1,lty=2)
@@ -98,7 +101,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
     #myKernel <- KernelClass_Poly$new(px = px,pz = pz)
   } else if(kernel == "SEiso"){
     cat("Using isotropic SE kernel (treats each basis dimension equally)\n"); myKernel <- KernelClass_SE_iso$new()
-  } else if(kernel == "nonaddSE"){
+  } else if(kernel == "SEnonadd"){
     cat("Using non-additive SE kernel (regular GP)\n"); myKernel <- KernelClass_SE_nonadd$new()
     cat("Only linear spline supported for regular GP features\n"); spline <- "linear"
   } else {
@@ -159,7 +162,12 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
   graphics::plot(stats[1,3:(iter+2)],type="l",ylab="training RMSE",xlab="Iteration")
   graphics::par(mfrow=c(1,1))
 
-  structure(list(Kernel = myKernel, Spline=mySpline,
+  structure(list(Kernel = myKernel, Spline=mySpline,OptimSettings = list(optim=myoptim,
+                                                                         lr=learning_rate,
+                                                                         momentum = momentum,
+                                                                         beta1 = beta1,
+                                                                         beta2 = beta2,
+                                                                         iter = iter),
                  moments=moments,
                  train_data=list(y = y,X = X.intern,Z = Z, Zbinary = isbinary)),
                  class = "GPspline")
