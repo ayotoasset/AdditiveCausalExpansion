@@ -8,6 +8,7 @@ importFrom("stats", "model.matrix")
 #importFrom("Formula", "model.matrix")
 #S3method(predict, myclass)
 exportPattern(GPspline)
+exportPattern(NewtonStep)
 S3method("predict", "GPspline")
 S3method("plot", "GPspline")
 

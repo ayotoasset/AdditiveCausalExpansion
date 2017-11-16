@@ -32,7 +32,7 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
   }
 
   //get mean and de-mean
-  moments(0,0) = 0; // mean is a parameter
+  moments(0,0) = mean(y);//0; // mean is a parameter
   y = y - moments(0,0);
   for(unsigned int i = 1; i < (px+1); i++){
     if(isbinary(i-1)==0){

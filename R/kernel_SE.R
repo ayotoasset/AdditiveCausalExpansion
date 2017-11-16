@@ -10,9 +10,10 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      B <<- B
                                      p <<- p
                                      parameters <<- matrix(c(log(1), #sigma
-                                                      mean(y), #mu
-                                                      log(seq(B,1)),
-                                                      rep(0.1,(p) * B) # lambda and L
+                                                      0, #mu
+                                                      log(seq(B,1)), #lambda
+                                                      rep(0.1,p), #L for nuisance term
+                                                      rep(0.1,p * (B-1)) # L for additive kernels
                                                       ))
                                      # [ 1 | 1 | B | B | B | B ]
                                      # B is repeated p+1 times with the first block being lambda[1:B]
@@ -48,7 +49,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      invKmatn <<- invKmatList$inv
                                      invKmatList
                                    },
-                                   para_update = function(iter,y,X,Z,Optim) {
+                                   para_update = function(iter,y,X,Z,Optim,printevery=100) {
                                      #update Kmat and invKmat in the class environment
                                      stats <- c(0,0)
                                      invKmatList <- getinv_kernel(X,Z);
@@ -65,7 +66,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
 
                                      mean_solution(y) #overwrites mu gradient update
 
-                                     if(iter%%100 == 0){ cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1])) }
+                                     if(iter%%printevery == 0){ cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1])) }
 
                                      stats
                                    },
@@ -83,13 +84,13 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      #using analytic solution
                                      parameters[2] <<- mu_solution_cpp(y, invKmatn)
                                    },
-                                   predict = function(y,X,Z,X2,Z2,mean_y,var_y){
+                                   predict = function(y,X,Z,X2,Z2,mean_y,std_y){
                                      n2 <- nrow(X2)
 
                                      K_xX <- kernel_mat(X2,X,Z2,Z)$full
                                      K_xx <- kernel_mat_sym(X2,Z2)$full
 
-                                     outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx, mean_y,var_y)
+                                     outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx, mean_y,std_y)
                                    },
                                    predict_marginal = function(y,X,Z,X2,dZ2,mean_y,std_y,std_Z,calculate_ate){
 

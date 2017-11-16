@@ -69,7 +69,7 @@ optNewton <- setRefClass("NewtonOpt",
                              parameters
 
                            },
-                           initOpt = function(KernelObj,inititer = 1){
+                           initOpt = function(KernelObj,inititer = 5){
                              nu <<- KernelObj$parameters*0
                              inititer <<- inititer
                              useHessian <<- TRUE

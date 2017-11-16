@@ -23,7 +23,7 @@ bool Nesterov_cpp(double learn_rate, double momentum, arma::vec& nu, arma::vec g
 }
 
 // [[Rcpp::export]]
-bool Newton_cpp(double iter, double learn_rate, double momentum, arma::vec& nu, arma::vec grad, const arma::mat& Hessian, arma::vec& para, const unsigned int& B){
+bool Newton_cpp(double iter, double learn_rate, double momentum, arma::vec& nu, arma::vec grad, arma::mat& Hessian, arma::vec& para, const unsigned int& B){
 
   bool output_flag = arma::is_finite(grad); // if all gradients finite
 
@@ -31,6 +31,12 @@ bool Newton_cpp(double iter, double learn_rate, double momentum, arma::vec& nu, 
   if(output_flag==false){
     Rcout << "Element of the gradient is not finite: " << find_nonfinite(grad) << std::endl;
     grad.elem( find_nonfinite(grad) ).zeros();}
+
+  //for numeric stability
+  for(unsigned int i=0; i<grad.size();i++){
+    Hessian(i,i) += 0.0001;
+  }
+
 
   grad.rows(2,1+B) = solve(Hessian.submat(2,2,1+B,1+B),grad.rows(2,1+B));
   for(unsigned int j= 2+B; j < grad.size(); j++){
