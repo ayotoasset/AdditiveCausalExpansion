@@ -33,7 +33,7 @@ NewtonStep <- function(object,maxiter=1,tol,lr=object$OptimSettings$lr,momentum=
     mytol <- stats[2]-oldstats[2]
     object$OptimSettings$iter <- iter
   }
-  cat("After",iter-object$OptimSettings$iter <- iter,"steps:\n")
+  cat("After",iter-object$OptimSettings$iter,"steps:\n")
   cat("Final evidence: ", stats[2], "| Error:", stats[1],"| Tolerance: ", mytol,"\n")
 
   object$OptimSettings$iter <- iter
