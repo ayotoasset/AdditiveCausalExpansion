@@ -81,12 +81,12 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 
   X.intern <- as.matrix(X)
   if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
-  Z <- matrix(as.numeric(Z))
+  Z.intern <- matrix(as.numeric(Z))
   if( !all(dim(X.intern)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
-  if( !all(dim(Z)==c(n,pz)) ) stop("Dimension of Z not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
+  if( !all(dim(Z.intern)==c(n,pz)) ) stop("Dimension of Z not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
 
   #normalize variables
-  moments <- normalize_train(y,X.intern,Z)
+  moments <- normalize_train(y,X.intern,Z.intern)
 
   #check whether Z is univariate
   if( pz > 1 ) isuniv = FALSE else isuniv = TRUE
@@ -94,11 +94,13 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
   if( isbinary <- (length(unique(c(Z))) == 2) ) {cat("Binary Z detected\n"); spline = "binary"}
   else {cat("Non-Binary Z detected\n"); isbinary = FALSE}
 
-  #Gaussian Process kernel (only SE implemented)
-  if (kernel == "Matern") {
-    #myKernel <- KernelClass_Matern$new(px = px,pz = pz)
-  } else if(kernel == "Polynomial") {
-    #myKernel <- KernelClass_Poly$new(px = px,pz = pz)
+  #Gaussian Process kernel (only SE and Matern so far)
+  if (kernel == "Matern12") {
+    cat("Using Matern 1/2 kernel\n"); myKernel <- KernelClass_Matern12$new()
+  } else if (kernel == "Matern32") {
+    cat("Using Matern 3/2 kernel\n"); myKernel <- KernelClass_Matern32$new()
+  } else if (kernel == "Matern52") {
+    cat("Using Matern 5/2 kernel\n"); myKernel <- KernelClass_Matern52$new()
   } else if(kernel == "SEiso"){
     cat("Using isotropic SE kernel (treats each basis dimension equally)\n"); myKernel <- KernelClass_SE_iso$new()
   } else if(kernel == "SEnonadd"){
@@ -121,7 +123,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
     cat("Using NC-spline\n"); mySpline <- ns_spline$new()  }
 
   #generate basis
-  mySpline$trainbasis(Z,n.knots) #binary "spline" discards n_knots
+  mySpline$trainbasis(Z.intern,n.knots) #binary "spline" discards n_knots
 
   #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
   myKernel$parainit(y,p=px,mySpline$dim())
@@ -169,7 +171,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
                                                                          beta2 = beta2,
                                                                          iter = iter),
                  moments=moments,
-                 train_data=list(y = y,X = X.intern,Z = Z, Zbinary = isbinary)),
+                 train_data=list(y = y,X = X.intern,Z = Z.intern, Zbinary = isbinary)),
                  class = "GPspline")
 }
 
