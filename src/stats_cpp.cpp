@@ -6,7 +6,7 @@ using namespace arma;
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-arma::rowvec stats_SE_cpp(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, arma::vec& eigenval, const double mu) {
+arma::rowvec stats_cpp(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, arma::vec& eigenval, const double mu) {
   //Rcpp::List gradients = clone(parameters); //for the same list structure
 
   unsigned int n = y.size();

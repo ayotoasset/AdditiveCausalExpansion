@@ -11,7 +11,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      p <<- p
                                      parameters <<- matrix(c(log(1), #sigma
                                                       0, #mu
-                                                      log(seq(B,1)), #lambda
+                                                      0,rep(1,B-1), #lambda as B(Z) B(Z) becomes very small
                                                       rep(0.1,p), #L for nuisance term
                                                       rep(0.1,p * (B-1)) # L for additive kernels
                                                       ))
@@ -53,9 +53,12 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      #update Kmat and invKmat in the class environment
                                      stats <- c(0,0)
                                      invKmatList <- getinv_kernel(X,Z);
+                                     #cat(iter, "|", all(is.finite(invKmatn)),"|",all(is.finite(invKmatn)),"\n")
+                                     #print(c(parameters))
                                      if(!Optim$useHessian){
                                        gradients <- grad_SE_cpp(y,X,Z,Kmat,Karray,invKmatn,invKmatList$eigenval,
                                                                 parameters,stats,B)
+
                                        parameters <<- Optim$update(iter,parameters,gradients)
                                      } else {
                                        gradlist <- grad_SE_Hessian_cpp(y,X,Z,Kmat,Karray,invKmatn,invKmatList$eigenval,
@@ -77,7 +80,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                        invKmatList <- invkernel_cpp(Klist$full,c(parameters[1]))
                                      }
 
-                                     stats <- stats_SE_cpp(y,Kmat, invKmatList$inv,invKmatList$eigenval, parameters[2])
+                                     stats <- stats_cpp(y,Kmat, invKmatList$inv,invKmatList$eigenval, parameters[2])
 
                                    },
                                    mean_solution = function(y){
