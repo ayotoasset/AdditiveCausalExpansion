@@ -175,7 +175,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
                  class = "GPspline")
 }
 
-#' Fir GPspline, data.frame wrapper of GPspline.train
+#' Fit GPspline, data.frame wrapper of GPspline.train
 #' @param formula Formula of the form \code{y ~ x | z} where the \code{x} variables determine the coefficients of the (spline) basis expansion of \code{z}.
 #' @param data A data.frame containing the variables in the formula.
 #' @param kernel A string (default: "SE" Squared exponential with ARD) -- has no effect, might include (ARD) polynomial and Matern 5/2 kernel
