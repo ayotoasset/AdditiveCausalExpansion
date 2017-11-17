@@ -37,12 +37,12 @@ bool Newton_cpp(double iter, double learn_rate, double momentum, arma::vec& nu, 
     Hessian(i,i) += 0.0001;
   }
 
-
+  /*
   grad.rows(2,1+B) = solve(Hessian.submat(2,2,1+B,1+B),grad.rows(2,1+B));
   for(unsigned int j= 2+B; j < grad.size(); j++){
     grad(j) = grad(j) / Hessian(j,j);
-  }
-  //grad = solve(Hessian,grad);
+  }*/
+  grad = solve(Hessian,grad);
 
 
   nu = momentum * nu + learn_rate * grad;

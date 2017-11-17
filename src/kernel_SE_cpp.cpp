@@ -49,7 +49,6 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,const arma::mat& X2,const arma::ma
 }
 
 //more efficient with pointers and a class but well
-
 arma::mat uppertri2symmat(arma::vec matvec,unsigned int dim){
   arma::mat out(dim,dim);
   unsigned int cnt = 0;
@@ -89,6 +88,7 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X, const arma::mat& Z, cons
     }
   }
 
+
   tmpX.col(0) = exp(parameters[2] - tmpX.col(0) ); Ks.slice(0) = uppertri2symmat( tmpX.col(0), n);
   for(unsigned int b = 1; b < B; b++){
     cnt=0;
@@ -98,7 +98,6 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X, const arma::mat& Z, cons
         continue; }
       for(unsigned int c = r; c < n; c++){
         tmpX(cnt,b) = exp(parameters[2+b] - tmpX(cnt,b) ) * Z(r,b-1) * Z(c,b-1); // replace each element of tmpX
-        //tmpX(cnt,b) = exp(parameters[2+b] - tmpX(cnt,b) - pow(Z(r,b-1) - Z(c,b-1),2) ); // replace each element of tmpX
         cnt++;
       }
     }
@@ -146,11 +145,6 @@ Rcpp::List invkernel_cpp(arma::mat pdmat, const double sigma){
     invKmat.col(i) = invKmat.col(i) / eigval[i];
   }
   invKmat = invKmat * eigvec.t();
-
-  if( eigval[0]<=0 ){
-    Rcout << "Smallest eigenvalue is negative or zero! - This should not happen as sigma puts a lower bound on the eigenvalues." << std::endl;
-    Rcout << "Sigma^2: " << exp(sigma) << std::endl;
-  }
 
   return Rcpp::List::create(_("eigenval") =  eigval,
                             _("inv") = invKmat); //out["eigenvec"] = eigvec;
@@ -231,9 +225,18 @@ arma::vec grad_SE_cpp(const arma::vec& y, const arma::mat& X, const arma::mat& Z
   stats(0) = pow(arma::norm(ybar - (Kfull * alpha)),2);
   //Evidence
   stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + sum(log(eigenval)) + arma::dot( ybar, alpha ) ) ;
-
-
   //stats is returned as a reference
+
+  //clip gradients
+  //umat idx=(gradients>20);
+  for(unsigned int g=0; g<gradients.size();g++){
+    if(gradients(g)>20){
+      gradients.row(g) = 20;
+    } else if(gradients(g)<-20) {
+      gradients.row(g) = -20;
+    }
+  }
+
 
   return gradients;
 }
@@ -290,12 +293,12 @@ arma::mat evid_scale_gradients_hessian(const arma::mat& X,const arma::mat& invK,
 
       //Hessian wrt to sigma (too large)
       //Hessian(0, 2 + b + B*(i+1)) = Hessian(2 + b + B*(i+1),0) = - 0.5 * arma::trace( Kaa_sigma * tmpdK) * exp( - tmpL );
-      /*
+
       for(unsigned int q=0; q<B; q++){
       //Hessian wrt to lambda
       Hessian(2+q,2 + b + B*(i+1)) = Hessian(2 + b + B*(i+1),2+q) = - 0.5 * arma::trace( K.slice(q) * tmp) * exp( - tmpL );
       }
-      */
+
 
       /*
       for(unsigned int q=(b+1); q<B; q++){
