@@ -73,15 +73,16 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 
   if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
   n <- length(y); px <- ncol(X);
-  y <- matrix(y);
+  y <- matrix(data.table::copy(y));
+  X.intern <- as.matrix(data.table::copy(X))
+  if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
+  Z.intern <- matrix(as.numeric(data.table::copy(Z)))
 
   if((class(Z) == "matrix") || (class(Z)== "data.frame")) { pz <- ncol(Z); }
   else if(length(c(Z))==n ) { pz <- 1; }
   else { stop("Dimension/filetype of Z invalid.\n") }
 
-  X.intern <- as.matrix(X)
-  if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
-  Z.intern <- matrix(as.numeric(Z))
+
   if( !all(dim(X.intern)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
   if( !all(dim(Z.intern)==c(n,pz)) ) stop("Dimension of Z not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
 
@@ -126,7 +127,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
   mySpline$trainbasis(Z.intern,n.knots) #binary "spline" discards n_knots
 
   #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
-  myKernel$parainit(y,p=px,mySpline$dim())
+  myKernel$parainit(y,p=px,mySpline$dim(),mySpline$B)
 
   #initialize optimizer
   if((myoptim=="Adam") || (myoptim=="Nadam")){
@@ -149,7 +150,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 
   ### write the loop in C++ at one point together with the optimizer initialization ?
   for(iter in 1:maxiter){
-    stats[,iter+1] = myKernel$para_update(iter,y,X,mySpline$B,myOptimizer)
+    stats[,iter+1] = myKernel$para_update(iter,y,X.intern,mySpline$B,myOptimizer)
 
     change = abs(stats[2,iter+1] - stats[2,iter])
     if((change < tol) && (iter > 3)){ cat( sprintf("Stopped: change smaller than tolerance after %d iterations\n",iter)); break; }
@@ -157,7 +158,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 
   if(iter == maxiter) cat("Optimization stopped: maximum iterations reached\n")
 
-  stats[,iter+2] = myKernel$get_train_stats(y,X,mySpline$B)
+  stats[,iter+2] = myKernel$get_train_stats(y,X.intern,mySpline$B)
 
   graphics::par(mfrow=c(1,2))
   graphics::plot(stats[2,3:(iter+2)],type="l",ylab="log Evidence",xlab="Iteration")

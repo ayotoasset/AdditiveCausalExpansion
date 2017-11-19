@@ -306,7 +306,7 @@ double evid_Matern_grad(const arma::mat& Kaa, const arma::mat& dK) {
   return - 0.5 * arma::trace( Kaa * dK);
 }
 
-arma::mat evid_scale_Matern52_gradients(const arma::mat& X, const arma::mat& Kaa, const arma::cube& K, arma::vec L,const arma::vec& lambda, unsigned int B){
+arma::mat evid_scale_Matern52_gradients(const arma::mat& X,const arma::mat& Z, const arma::mat& Kaa, const arma::cube& K, arma::vec L,const arma::vec& lambda, unsigned int B){
   // produce a (p x B) matrix "grad" with the gradients of L
   unsigned int n = X.n_rows;
   unsigned int p = X.n_cols;
@@ -324,12 +324,17 @@ arma::mat evid_scale_Matern52_gradients(const arma::mat& X, const arma::mat& Kaa
     }
   }
 
+  arma::mat tmpZ(n,n); tmpZ.ones();
   for(unsigned int b = 0; b < B; b++){
+    if(b>0){ //for b=0 take intitial values
+      tmpZ = Z.col(b-1) * Z.col(b-1).t();
+    }
     tmpX2 = sqrt(5*tmpX.slice(b)) + 5*tmpX.slice(b)/3;
     tmpX.slice(b) =  0.5 * K.slice(b) % tmpX2 / ( (1+tmpX2) % sqrt(tmpX.slice(b)) );
     //as tmpX is at least 0 on the diagonal and he division gives nan
     tmpX.slice(b).elem(find(tmpX2==0)).zeros();
-    tmpX.slice(b) -= lambda(b) *sqrt(5)/6;
+    //Rcpp::Rcout << tmpZ(0,0) <<" | "<< tmpZ(0,1) <<" | "<< tmpZ(0,2) << std::endl;
+    tmpX.slice(b) -= lambda(b) *sqrt(5)/6 * tmpZ;
   }
 
   for(unsigned int i=0; i < p; i++){
@@ -440,7 +445,7 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
   tmpK = invKmatn - alpha * alpha.t();
 
   //sigma
-  gradients[0] = - 0.5 * arma::sum( tmpK.diag() ) * exp( parameters[0] ); // thus avoid allocating dK
+  gradients[0] = - 0.5 * arma::trace( tmpK ) * exp( parameters[0] ); // thus avoid allocating dK
 
   //lambda
   for(unsigned int b=0;b<B;b++){
@@ -453,7 +458,7 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
       break;
     case 1: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern32_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), B);
       break;
-    case 2: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern52_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), parameters.rows(2,1+B), B);
+    case 2: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern52_gradients(X,Z, tmpK, K, parameters.rows(2+B,1+B*(px+1)), parameters.rows(2,1+B), B);
   }
 
   //mu - gradient approach
@@ -474,6 +479,5 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
       gradients.row(g) = -20;
     }
   }
-
   return gradients;
 }

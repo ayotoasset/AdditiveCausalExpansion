@@ -16,7 +16,8 @@ Imports: methods,
          base,
          graphics,
          Rcpp (>= 0.12.12),
-         splines2 (>= 0.2.6)
+         splines2 (>= 0.2.6),
+         data.table (>= 1.10.4)
 Suggests: plotly (>= 4.7),
           ggplot2 (>= 2.2.1)
 LinkingTo: Rcpp, RcppArmadillo

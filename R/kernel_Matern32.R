@@ -6,14 +6,15 @@ KernelClass_Matern32 <- setRefClass("Matern32",
                                                   B = "numeric",
                                                   p = "numeric"), #basis dimension
                                     methods = list(
-                                      parainit = function(y,p,B) {
+                                      parainit = function(y,p,B,Z) {
+                                        Z <- as.matrix(Z)
                                         B <<- B
                                         p <<- p
-                                        parameters <<- matrix(c(log(1), #sigma
+                                        n <- length(y)
+                                        parameters <<- matrix(c(log(0.5), #sigma note that we
                                                                 0, #mu
-                                                                rep(1,B), #lambda as B(Z) B(Z) becomes very small
-                                                                rep(0.1,p), #L for nuisance term
-                                                                rep(1,p * (B-1)) # L for additive kernels
+                                                                -log(c(1,diag(t(Z)%*%Z)/n)), #lambda as B(Z) B(Z) becomes very small
+                                                                rep(c(-0.1,rep(0.1,B-1)),p)  #L: for nuisance term -0.1 for others 0.1
                                         ))
                                       },
                                       kernel_mat = function(X1,X2,Z1,Z2) {
