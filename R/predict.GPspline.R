@@ -12,29 +12,38 @@
 predict.GPspline <- function(object,newX,newZ, marginal = FALSE, causal = FALSE){
   isbinary <- object$train_data$Zbinary
   #this function returns the prediction for the fitted Gaussian process
-  if(missing(newX) || missing(newZ)){
-    if(missing(newX)){
-      cat("No newX given, using training X.\n")
-      newX.intern <- object$train_data$X #normalized
-    } else {
-      newX.intern <- newX
-    }
-    if(missing(newZ)){
-      cat("No newZ given, using training Z.\n")
-      newZ.intern <- object$train_data$Z #normalized
-    } else {
-      newZ.intern <- newZ
-    }
-  }  else if( !missing(newX) && !missing(newZ)) {
-    newX.intern <- as.matrix(newX); newZ.intern <- as.matrix(newZ)
+  if(missing(newX) && missing(newZ)){
+    cat("No newX given, using training X.\n")
+    newX.intern <- object$train_data$X #normalized
 
-    if(ncol(newX.intern)!=ncol(object$train_data$X)){ stop("Error: Dimension mismatch of X with newX", call. = FALSE) }
-    if((ncol(newZ.intern)!=ncol(object$train_data$Z)) && (length(newZ)!=1) ){ stop("Error: Dimension mismatch of Z with newZ", call. = FALSE) }
-    if(length(newZ)==1){ newZ.intern <- matrix(rep(newZ,nrow(newX.intern)),nrow(newX.intern),1) }
+    cat("No newZ given, using training Z.\n")
+    newZ.intern <- object$train_data$Z #normalized
+
+  } else if(!missing(newX) && missing(newZ)){
+    newX.intern <- as.matrix(data.table::copy(newX));
+    cat("No newZ given, using 0.\n")
+    newZ.intern <- matrix(rep(0,nrow(newX.intern)),nrow(newX.intern),1)
 
     #normalize the non-binary variables
     normalize_test(newX.intern,newZ.intern,object$moments)
+
+  }  else if( !missing(newX) && !missing(newZ)) {
+    newX.intern <- as.matrix(data.table::copy(newX)); newZ.intern <- as.matrix(data.table::copy(newZ))
+
+    if(ncol(newX.intern)!=ncol(object$train_data$X)){ stop("Error: Dimension mismatch of X with newX", call. = FALSE) }
+    if((ncol(newZ.intern)!=ncol(object$train_data$Z)) && (length(newZ)!=1) ){ stop("Error: Dimension mismatch of Z with newZ", call. = FALSE) }
+    if(length(newZ)==1){ newZ.intern <- matrix(rep(newZ.intern,nrow(newX.intern)),nrow(newX.intern),1) }
+    #normalize the non-binary variables
+    normalize_test(newX.intern,newZ.intern,object$moments)
+
   }
+
+  if(any(abs(newX.intern)>1)){
+    cat("Some values of X outside the unit-circle of the training data.\n")
+    apply(abs(newX.intern),2,max)
+
+  }
+
 
   #get appropriate basis
   if(marginal==FALSE){
