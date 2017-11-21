@@ -11,10 +11,10 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      B <<- B
                                      p <<- p
                                      n <- length(y)
-                                     parameters <<- matrix(c(log(0.5), #sigma note that we
+                                     parameters <<- matrix(c(log(1), #sigma note that we
                                                       0, #mu
                                                       -log(c(1,diag(t(Z)%*%Z)/n)), #lambda as B(Z) B(Z) becomes very small
-                                                      rep(c(-0.1,rep(0.1,B-1)),p)  #L: for nuisance term -0.1 for others 0.1
+                                                      rep(c(0.1,rep(0.1,B-1)),p)  #L: for nuisance term -0.1 for others 0.1
                                                       ))
                                      # [ 1 | 1 | B | B | B | B ]
                                      # B is repeated p+1 times with the first block being lambda[1:B]
@@ -35,6 +35,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    kernel_mat_sym = function(X,Z) {
                                      #intended use for the gradient step
                                      Klist <- kernmat_SE_symmetric_cpp(X,Z,parameters)
+                                     #Klist <- kernmat_SE_cpp(X,X,Z,Z,parameters)
                                      Kmat <<- Klist$full
                                      Karray <<- Klist$elements
                                      Klist
@@ -91,8 +92,8 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    predict = function(y,X,Z,X2,Z2,mean_y,std_y){
                                      n2 <- nrow(X2)
 
-                                     K_xX <- kernel_mat(X2,X,Z2,Z)$full
-                                     K_xx <- kernel_mat_sym(X2,Z2)$full
+                                     K_xX <- kernmat_SE_cpp(X2,X,Z2,Z,parameters)$full
+                                     K_xx <- kernmat_SE_symmetric_cpp(X2,Z2,parameters)$full
 
                                      outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx, mean_y,std_y)
                                    },
@@ -101,8 +102,8 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      n <- length(y);
                                      n2 <- nrow(X2);
 
-                                     Kmarginal_xX <- kernel_mat(X2,X,dZ2,Z)$elements
-                                     Kmarginal_xx <- kernel_mat_sym(X2,dZ2)$elements
+                                     Kmarginal_xX <- kernmat_SE_cpp(X2,X,dZ2,Z,parameters)$elements
+                                     Kmarginal_xx <- kernmat_SE_symmetric_cpp(X2,dZ2,parameters)$elements
 
                                      outlist <- pred_marginal_cpp(y,parameters[1],parameters[2],
                                                                   invKmatn,
