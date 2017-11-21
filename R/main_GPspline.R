@@ -73,7 +73,7 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 
   if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
   n <- length(y); px <- ncol(X);
-  y <- matrix(data.table::copy(y));
+  y <- matrix(y); #data.table::copy(
   X.intern <- as.matrix(data.table::copy(X))
   if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
   Z.intern <- matrix(as.numeric(data.table::copy(Z)))
