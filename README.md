@@ -1,6 +1,5 @@
 # ACE - Additive Causal Expansion Model
-Package for a varying-coefficient regression with GP-regularization of the varying coefficients using a separate set of covariates.
-The basis is based on the treatment variable, allowing for causal inference for continuous variables.
+Package for a varying-coefficient regression with Gaussian process priors on the varying coefficients (functions) dependent on the confounders. The linear elements are the basis expansion of the treatment variable, allowing for causal inference for continuous variables.
 
 ## Installation
 It can be installed using (requires appropriate c++ compilers, see the documentation of ```Rcpp```):
@@ -21,7 +20,7 @@ We can write the model in reduced form ```y = f(x,z) + eps``` with ```f ~ GP(mu,
 ```
 K_r(i,j) = sum_{l=1}^B K_{g_l}(x_i,x_j) b_l(z_i) b_l(z_j).
 ```
-This constitutes a proper covariance Mercer kernel (sum of a product of kernels) and we can use standard Gaussian process inference methods to obtain the posterior distribution, i.e. empirical Bayes. Note that the spline knots are fixed in number and location.
+This constitutes a proper covariance Mercer kernel (sum of a product of kernels) and we can use standard Gaussian process inference methods to obtain the posterior distribution, i.e. empirical Bayes. Note that for spline expansions, the spline knots are fixed in number and location.
 
 ## Example
 ```
