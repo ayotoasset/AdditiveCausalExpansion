@@ -1,14 +1,14 @@
-# GPspline
-Package for a varying-coefficients spline regression with GP-regularization of the spline coefficients using a separate set of covariates. The method is designed to combine the predictive capabilities of black-box machine learning methods with the interpretative aspect of parametric models, especially with regards to binary and continuous causal effects.
+# ACE - Additive Causal Expansion Model
+This is a package for a varying-coefficient regression with Gaussian process priors on the varying coefficients. The coefficient functions are dependent on the confounders. The linear elements are the basis expansion of the treatment variable, allowing for causal inference for continuous variables.
 
 ## Installation
 It can be installed using (requires appropriate c++ compilers, see the documentation of ```Rcpp```):
 ```
-install.packages("https://github.com/mazphilip/GPspline/raw/master/builds/GPspline_0.2.0.tar.gz", repos = NULL, type = "source")
+install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/GPspline_0.2.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Theory
-The intended use case is a (for now) single dimensional set of a continuous variable Z whose marginal (predictive/causal) effect we are interested. The other set, the control variables X or "confounders" for causal inference, are used to make the function approximation more accurate and for the causal effects control for confounding. Using Gaussian processes, we can use differentiable spline bases to obtain the marginal effect. 
+The intended use case is a (for now) single dimensional set of a continuous variable Z whose marginal causal effect we are interested in. The other set, the control/confounding variables X are used to adjust for the confounding (see Pearl . Using Gaussian processes, we can use differentiable spline bases to obtain the marginal effect. 
 
 Formally,
 ```
@@ -20,7 +20,7 @@ We can write the model in reduced form ```y = f(x,z) + eps``` with ```f ~ GP(mu,
 ```
 K_r(i,j) = sum_{l=1}^B K_{g_l}(x_i,x_j) b_l(z_i) b_l(z_j).
 ```
-This constitutes a proper covariance Mercer kernel (sum of a product of kernels) and we can use standard Gaussian process inference methods to obtain the posterior distribution, i.e. empirical Bayes. Note that the spline knots are fixed in number and location.
+This constitutes a proper covariance Mercer kernel (sum of a product of kernels) and we can use standard Gaussian process inference methods to obtain the posterior distribution, i.e. empirical Bayes. 
 
 ## Example
 ```
