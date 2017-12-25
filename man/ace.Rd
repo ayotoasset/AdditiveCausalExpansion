@@ -49,7 +49,7 @@ df$z = rnorm(n2, exp(df$x)-14, 1)
 y_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * ((z+8)^2 - 2*z))}
 y2_true <- y_truefun(df[,c("x","x2")],df$z)
 df$y <- rnorm(n2, mean = y2_true, sd = 1)
-my.GPS <- GPspline(y ~ x + x2 | z,data=df,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=2)
+my.GPS <- ace(y ~ x + x2 | z,data=df,myoptim="GD",learning_rate = 0.0001,basis="ns",n.knots=2)
 my.pred <- predict(my.GPS)
 plot(df$y,my.pred$map); abline(0,1,lty=2)
 #prediction of the curve

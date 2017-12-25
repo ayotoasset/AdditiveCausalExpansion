@@ -45,7 +45,7 @@ Fit a VCM basis model with Gaussian process priors on the coefficients
 \examples{
 #Example replicating CausalStump with binary uni-variate Z
 #Generate data
-library(GPspline)
+library(ace)
 set.seed(1231)
 n <- 120
 Z <- rbinom(n, 1, 0.3)
@@ -60,7 +60,7 @@ y1_true <- y_truefun(X,rep(1,n))
 Y0 <- rnorm(n, mean = y0_true, sd = 1)
 Y1 <- rnorm(n, mean = y1_true, sd = 1)
 Y <- Y0*(1-Z) + Y1*Z
-my.GPS <- GPspline.train(Y,X,Z,myoptim="GD",learning_rate=0.0001)
+my.GPS <- ace.train(Y,X,Z,myoptim="GD",learning_rate=0.0001)
 #print (sample) average treatment effect (ATE)
 predict(my.GPS,marginal=TRUE,causal=TRUE)$ate_map
 #true ATE
@@ -83,7 +83,7 @@ marg_truefun <- function(x,z) {as.matrix( (x-1.5) * (2*(z+9) - 2))}
 y2_true <- y_truefun(X2,Z2)
 Y2 <- rnorm(n2, mean = y2_true, sd = 2)
 marg_true <- marg_truefun(X2,Z2)
-my.GPS <- GPspline.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="cubic",n.knots=1)
+my.GPS <- ace.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,basis="cubic",n.knots=1)
 plot(my.GPS,1,marginal=F,plot3D=FALSE,truefun=y_truefun)
 my.pred <- predict(my.GPS)
 #quality of prediction
