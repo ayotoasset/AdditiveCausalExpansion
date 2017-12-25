@@ -8,7 +8,7 @@ optAdam <- setRefClass("AdamOpt",
                                      useHessian="logical"),
                        methods = list(
                          update = function(iter,parameters,gradients) {
-                           if(Adam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
+                           if(Adam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients are not finite, NaN, or NA. Often this is due to too large learning rates.") }
                            parameters
                          },
                          initOpt = function(KernelObj){
@@ -27,7 +27,7 @@ optNadam <- setRefClass("NadamOpt",
                                       useHessian="logical"),
                         methods = list(
                           update = function(iter,parameters,gradients) {
-                            if(Nadam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
+                            if(Nadam_cpp(iter,lr,beta1,beta2,1e-8,m,v,gradients,parameters)==FALSE) { stop("Some gradients are not finite, NaN, or NA. Often this is due to too large learning rates.") }
                             parameters
                           },
                           initOpt = function(KernelObj){
@@ -44,7 +44,7 @@ optNesterov <- setRefClass("NesterovOpt",
                                          useHessian="logical"),
                            methods = list(
                              update = function(iter,parameters,gradients) {
-                               if(Nesterov_cpp(lr,momentum,nu,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
+                               if(Nesterov_cpp(lr,momentum,nu,gradients,parameters)==FALSE) { stop("Some gradients are not finite, NaN, or NA. Often this is due to too large learning rates.") }
                                parameters
                              },
                              initOpt = function(KernelObj){
@@ -62,9 +62,9 @@ optNewton <- setRefClass("NewtonOpt",
                          methods = list(
                            update = function(iter,parameters,gradients,Hessian=diag(length(momentum)),B) {
                              if(iter>inititer){
-                               if(Newton_cpp(iter,lr,momentum,nu,gradients,Hessian,parameters,B)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
+                               if(Newton_cpp(iter,lr,momentum,nu,gradients,Hessian,parameters,B)==FALSE) { stop("Some gradients are not finite, NaN, or NA. Often this is due to too large learning rates.") }
                              } else {
-                               if(Nesterov_cpp(lr,momentum,nu,gradients,parameters)==FALSE) { stop("Some gradients not finite, NaN, or NA. Often this is due to too large learning rates.") }
+                               if(Nesterov_cpp(lr,momentum,nu,gradients,parameters)==FALSE) { stop("Some gradients are not finite, NaN, or NA. Often this is due to too large learning rates.") }
                              }
                              parameters
 

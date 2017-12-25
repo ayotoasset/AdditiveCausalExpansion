@@ -53,8 +53,12 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
     if(isbinary(i-1)==0){
       moments(i,1) = arma::max(abs(X.col(i-1)));
       X.col(i-1) = X.col(i-1) / moments(i,1);
+    } else {
+      moments(i,1) = 1;//arma::stddev(X.col(i-1));
+      X.col(i-1) = X.col(i-1) / moments(i,1);
     }
   }
+  //important for Z to be within unit circle for splines
   for(unsigned int i = px+1; i < (px+pz+1); i++){
     if(isbinary(i-px-1)==0){
       moments(i,1) = arma::max(abs(Z.col(i-px-1)));

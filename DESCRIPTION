@@ -1,7 +1,7 @@
-Package: GPspline
+Package: ace
 Type: Package
-Title: GPspline: Varying-coefficients spline model with GP-priors
-Version: 0.2.0
+Title: ACE: Additive Causal Expansions, VCM with Gaussian process-priors on the coefficients
+Version: 0.3.0
 Author@R: person(Philip,Pilgerstorfer,email = "philip at pilgerstorfer.org", role = c("aut", "cre"))
 Author: Philip Pilgerstorfer [aut, cre]
 Maintainer: Philip Pilgerstorfer <philip@pilgerstorfer.org>

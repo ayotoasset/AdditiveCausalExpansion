@@ -14,7 +14,7 @@
 #' @return Returns the plotly object
 
 
-plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
+plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
   #For the colors see http://jfly.iam.u-tokyo.ac.jp/color/#what
   Blue100    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-0)*255/100)
   Blue50    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-50)*255/100)
@@ -32,11 +32,15 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
   if(!missing(Zstep)){ Zstep = (Zstep - object$moments[1+px+pz,1]) / object$moments[1+px+pz,2]; }
 
   medX= matrix(NaN,1,px)
+  quantX= matrix(NaN,3,px)
   for(i in 1:px){
+    quantX[,i] <- quantile(object$train_data$X[,i] * object$moments[(i+1),2] + object$moments[(i+1),1],probs=c(0.25,0.5,0.75))
     medX[1,i] <- median(object$train_data$X[,i] * object$moments[(i+1),2] + object$moments[(i+1),1])
   }
 
-  if(!missing(Xcol)){
+  if(!missing(Xcol)) {
+    #stop("Supply either a numeric column index for X, or if the object was generated with the data.frame wrapper, a valid variable name.\n")
+  #{ #}
     #make numeric
     if(is.numeric(Xcol)) {
       nXcol <- paste0("X[,",Xcol,"]")
@@ -48,9 +52,6 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
       Xcol <- which(idx)
       idx <- idx*1L
     }
-    else {
-      stop("Supply either a numeric column index for X, or if  the object was generated with the data.frame wrapper, a valid variable name.\n")
-    }
 
     if(!missing(Xlim)) { Xlim = (Xlim - object$moments[1+Xcol,1])   / object$moments[1+Xcol,2]; }
     if(!missing(Xstep)){ Xstep = (Xstep - object$moments[1+Xcol,1]) / object$moments[1+Xcol,2]; }
@@ -60,8 +61,10 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
   }
 
   if(show.observations){
-    obsX <- object$train_data$X[,Xcol] * object$moments[1+Xcol,2]+ object$moments[1+Xcol,1]
-    obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
+    if(!missing(Xcol)){
+      obsX <- object$train_data$X[,Xcol] * object$moments[1+Xcol,2]+ object$moments[1+Xcol,1]
+    }
+    obsZ <- object$train_data$Z *        object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
     obsY <- object$train_data$y * object$moments[1,2] + object$moments[1,1]
   }
 
@@ -97,7 +100,8 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
       Xgrid2[,Xcol] <- grid$X
 
       cat("Predicting", nz, "x",  nx, "grid points\n")
-      surface <- predict(object,as.matrix(Xgrid2),grid$Z,marginal=marginal)
+
+      surface <- predict(object,newX = as.matrix(Xgrid2),newZ = grid$Z,marginal=marginal)
 
       if(marginal && show.observations){
         invisible(capture.output(obsY <- predict(object,marginal=TRUE)$map)) #surpress output as it is expected
@@ -110,17 +114,23 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
         gridL$Y <- surface$ci[,1]
         gridU$Y <- surface$ci[,2]
       } else {
-        true <- truefun(Xgrid2,grid$Z)
-        grid$Y <- surface$map - true
+        #Xgrid2_notnormalized = Xgrid2
+        #only single dimensional X right now:
+        true <- truefun(grid$X,# * object$moments[1+Xcol,2] + object$moments[1+Xcol,1],
+                        grid$Z)# * object$moments[1+px+pz,2] + object$moments[1+px+pz,1])
+        gridT <- grid
+        gridT$Y <- true
+        grid$Y <- surface$map #- true
         gridL = grid; gridU = grid;
-        gridL$Y <- surface$ci[,1] - true
-        gridU$Y <- surface$ci[,2] - true
+        gridL$Y <- surface$ci[,1] #- true
+        gridU$Y <- surface$ci[,2] #- true
 
         if(show.observations==TRUE){
-          Xgrid3 <- t(matrix(rep(medX,length(obsZ)),px,length(obsZ)))
-          Xgrid3[,Xcol] <- obsX
-          obsY <- obsY - truefun(Xgrid3,obsZ)
+          #Xgrid3 <- t(matrix(rep(medX,length(obsZ)),px,length(obsZ)))
+          #Xgrid3[,Xcol] <- obsX
+          obsY <- obsY #- predict(object,newX = Xgrid3,newZ = grid$Z,marginal=marginal)
         }
+
       }
 
       if(requireNamespace("plotly", quietly = TRUE) && (plot3D==TRUE)){ #!plotly
@@ -134,6 +144,13 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
           p <- plotly::add_trace(p,x = obsX,  y = c(obsZ), z = c(obsY), mode = "markers", type = "scatter3d",
                                marker = list(size = 5, color = "red", symbol = 104),inherit=FALSE,name="Observations")
         }
+        if(!missing(truefun)){
+          p <- plotly::add_trace(p,type = "scatter3d", mode = "markers",x = c(Xgrid), y = c(Zgrid),z = c(matrix(gridT$Y,nx,nz)),
+                                 opacity = 0.8,name="True",marker = list(size = 2, color = "black", symbol = 104),
+                                 #colors = c("#000000"),
+                                 inherit=FALSE)
+        }
+
         p <- plotly::layout(p,
             title = paste0("Marginal effect of Z conditional on ",nXcol," and median covariates"),
             scene = list(
@@ -142,9 +159,10 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
               yaxis = list(title = "Treatment Z"),
               zaxis = list(title = y.label)
             ))
-        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(grid$Y,nx,nz))
-        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridL$Y,nx,nz),opacity = 0.5)
-        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridU$Y,nx,nz),opacity = 0.5)
+        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(grid$Y,nx,nz),name="MAP")
+        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridL$Y,nx,nz),opacity = 0.5,name="Lower CI")
+        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridU$Y,nx,nz),opacity = 0.5,name="Upper CI")
+
         p
 
       } else if(requireNamespace("ggplot2", quietly = TRUE)) {
@@ -198,16 +216,16 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
       nz <- length(Zgrid)
       ngrid <- nz
 
-      Xgrid <- t(matrix(rep(medX,nz),px,ngrid))
-
       cat("Predicting", nz, "grid points\n")
+      Xgrid <- t(matrix(rep(medX,nz),px,ngrid))
       surface <- predict(object,Xgrid,Zgrid,marginal=marginal)
+
       Ygrid <- surface$map
       YgridL <- surface$ci[,1]
       YgridU <- surface$ci[,2]
       if(!marginal && show.observations){
-        obsY <- object$train_data$y * object$moments[1,2]       + object$moments[1,1]
-        obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
+        #obsY <- object$train_data$y * object$moments[1,2]       + object$moments[1,1]
+        #obsZ <- object$train_data$Z * object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
         y_limit <- c(min(YgridL,obsY),max(YgridU,obsY))
       } else {
         obsY <- NULL
@@ -215,10 +233,12 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
         y_limit <- c(min(YgridL),max(YgridU))
       }
       plot(obsZ, obsY, xlim=range(Zgrid),cex=0.5,ylab=y.label,xlab="Basis expanded Z",ylim = y_limit)
+      grid()
       if(!missing(truefun)){
         lines(Zgrid,truefun(Xgrid,Zgrid),lty=2,lwd=1.5)
       }
       lines(Zgrid,Ygrid,lty=2,lwd=2,col=Vermillion100)
+
       polygon(c(Zgrid, rev(Zgrid)),c(YgridL,rev(YgridU)),col = Vermillion50, border = FALSE)
     }
   } else {
@@ -245,6 +265,8 @@ plot.GPspline <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observati
       obsZ <- object$train_data$Z
       Xgrid2 <- t(matrix(rep(medX,nx),px,nx))
       Xgrid2[,Xcol] <- Xgrid
+
+      cat(dim(Xgrid2))
 
       if(marginal){
         #one curve ("treatment effect")

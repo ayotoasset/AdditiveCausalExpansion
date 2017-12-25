@@ -1,4 +1,4 @@
-#' Fit a VCM spline model with Gaussian process coefficients
+#' Fit a VCM basis model with Gaussian process priors on the coefficients
 #'
 #' @param y A numeric vector
 #' @param X A numeric vector or matrix
@@ -69,111 +69,153 @@
 #' plot(my.GPS,marginal=FALSE,truefun=y_truefun)
 #'
 
-GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.001,beta1=0.9,beta2=0.999,momentum=0.0){
+ace.train <- function(y, X, Z,
+                         kernel="SE",
+                         basis="linear",
+                         n.knots=1,
+                         myoptim = "GD",
+                         maxiter = 1000,
+                         tol = 1e-4,
+                         learning_rate = 0.001,
+                         beta1 = 0.9,
+                         beta2 = 0.999,
+                         momentum = 0.0){
 
-  if(class(y)=="factor") stop("y is not numeric. This package does not support classification tasks.")
-  n <- length(y); px <- ncol(X);
-  y <- matrix(y); #data.table::copy(
+  if (class(y)=="factor") {
+    stop("y is not numeric. This package does not support classification tasks.")
+  }
+  n <- length(y)
+  px <- ncol(X)
+  y <- matrix(y) #data.table::copy(
+  # create manual copy of variable since calling cpp functions with reference for normalization
   X.intern <- as.matrix(data.table::copy(X))
-  if(class(Z)=="factor") {Z <- (as.numeric(Z)-1) }
+  if (class(Z)=="factor") {
+    Z <- (as.numeric(Z)-1)
+  }
   Z.intern <- matrix(as.numeric(data.table::copy(Z)))
 
-  if((class(Z) == "matrix") || (class(Z)== "data.frame")) { pz <- ncol(Z); }
-  else if(length(c(Z))==n ) { pz <- 1; }
-  else { stop("Dimension/filetype of Z invalid.\n") }
+  if ((class(Z) == "matrix") || (class(Z)== "data.frame")) {
+    pz <- ncol(Z)
+  } else if (length(c(Z))==n ) {
+    pz <- 1
+  } else {
+    stop("Dimension/filetype of Z invalid.\n")
+  }
 
-
-  if( !all(dim(X.intern)==c(n,px)) ) stop("Dimension of X not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
-  if( !all(dim(Z.intern)==c(n,pz)) ) stop("Dimension of Z not correct. Use the observations as rows and variables as columns and check the number of observations with respect to y.\n")
+  if ( !all(dim(X.intern) == c(n,px))) {
+    stop("Dimension of X not correct. Use the observations as rows and variables as columns
+         and check the number of observations with respect to y.\n")
+  }
+  if ( !all(dim(Z.intern) == c(n,pz))) {
+    stop("Dimension of Z not correct. Use the observations as rows and variables as columns
+         and check the number of observations with respect to y.\n")
+  }
 
   #normalize variables
-  moments <- normalize_train(y,X.intern,Z.intern)
+  moments <- normalize_train(y, X.intern, Z.intern)
 
   #check whether Z is univariate
-  if( pz > 1 ) isuniv = FALSE else isuniv = TRUE
+  if (pz > 1) {
+    isuniv = FALSE
+  } else {
+    isuniv = TRUE
+  }
   #check whether Z is binary
-  if( isbinary <- (length(unique(c(Z))) == 2) ) {cat("Binary Z detected\n"); spline = "binary"}
-  else {cat("Non-Binary Z detected\n"); isbinary = FALSE}
+  if (isbinary <- (length(unique(c(Z))) == 2)) {
+    cat("Binary Z detected\n")
+    spline = "binary"
+  } else {
+    cat("Non-Binary Z detected\n")
+    isbinary = FALSE
+  }
 
   #Gaussian Process kernel (only SE and Matern so far)
   if (kernel == "Matern12") {
-    cat("Using Matern 1/2 kernel\n"); myKernel <- KernelClass_Matern12$new()
+    cat("Using Matern 1/2 kernel\n")
+    myKernel <- KernelClass_Matern12$new()
   } else if (kernel == "Matern32") {
-    cat("Using Matern 3/2 kernel\n"); myKernel <- KernelClass_Matern32$new()
+    cat("Using Matern 3/2 kernel\n")
+    myKernel <- KernelClass_Matern32$new()
   } else if (kernel == "Matern52") {
-    cat("Using Matern 5/2 kernel\n"); myKernel <- KernelClass_Matern52$new()
-  } else if(kernel == "SEiso"){
-    cat("Using isotropic SE kernel (treats each basis dimension equally)\n"); myKernel <- KernelClass_SE_iso$new()
-  } else if(kernel == "SEnonadd"){
-    cat("Using non-additive SE kernel (regular GP)\n"); myKernel <- KernelClass_SE_nonadd$new()
-    cat("Only linear spline supported for regular GP features\n"); spline <- "linear"
+    cat("Using Matern 5/2 kernel\n")
+    myKernel <- KernelClass_Matern52$new()
   } else {
-    cat("Using SE kernel\n"); myKernel <- KernelClass_SE$new()
+    cat("Using SE kernel\n")
+    myKernel <- KernelClass_SE$new()
   }
 
   #### select chosen spline or appropriate based on data ###
-  if( isuniv && ((isbinary && (spline == "binary")) || (spline=="linear"))) {
-    cat("Using binary/linear-basis\n");  mySpline <- linear_spline$new()  }
-  else if( isuniv && (spline == "B") ) {
-    cat("Using B-spline\n"); mySpline <- B_spline$new()  }
-  else if( isuniv && (spline == "square") ) {
-    cat("Using square-basis\n"); mySpline <- square_spline$new() }
-  else if( isuniv && (spline == "cubic") ) {
-    cat("Using cubic-basis\n"); mySpline <- ns_spline$new(); n.knots=0;}
-  else if( isuniv ){
-    cat("Using NC-spline\n"); mySpline <- ns_spline$new()  }
+  if (isuniv && ((isbinary && (spline == "binary")) || (basis == "linear"))) {
+    cat("Using binary/linear-basis\n")
+    myBasis <- linear_spline$new()
+  } else if (isuniv && (basis == "B")) {
+    cat("Using B-spline\n")
+    myBasis <- B_spline$new()
+  } else if (isuniv && (basis == "square")) {
+    cat("Using square-basis\n")
+    myBasis <- square_spline$new()
+  } else if (isuniv && (basis == "cubic")) {
+    cat("Using cubic-basis\n")
+    myBasis <- ns_spline$new()
+    n.knots = 0
+  } else if (isuniv) {
+    cat("Using NC-spline\n")
+    myBasis <- ns_spline$new()
+  }
 
   #generate basis
-  mySpline$trainbasis(Z.intern,n.knots) #binary "spline" discards n_knots
+  myBasis$trainbasis(Z.intern, n.knots) #binary "spline" discards n_knots
 
   #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
-  myKernel$parainit(y,p=px,mySpline$dim(),mySpline$B)
+  myKernel$parainit(y, px, myBasis$dim(), myBasis$B)
 
   #initialize optimizer
-  if((myoptim=="Adam") || (myoptim=="Nadam")){
-    if(myoptim=="Adam") {
-      myOptimizer = optAdam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2)
-    } else {
-      myOptimizer = optNadam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2)
+  if(myoptim=="Adam") {
+    myOptimizer = optAdam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2)
+  } else if(myoptim=="Nadam"){
+    myOptimizer = optNadam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2)
+  #} else if(myoptim=="Newton"){
+  #  myOptimizer = optNewton$new(lr = learning_rate, momentum = momentum)
+  } else if(myoptim == "GD" || myoptim=="Nesterov") {
+    if(myoptim == "GD") {
+      momentum = 0.0
     }
-  } else if(myoptim=="Newton"){
-    myOptimizer = optNewton$new(lr = learning_rate, momentum = momentum)
-  } else if(myoptim=="GD" || myoptim=="Nesterov"){
-    if(myoptim=="GD"){ momentum=0.0 }
     myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum)
   }
 
   #set optimization variables
   myOptimizer$initOpt(myKernel);
 
-  stats = matrix(0,2,maxiter+2) #Evidence and RMSE
+  stats = matrix(0, 2, maxiter+2) #Evidence and RMSE
 
   ### write the loop in C++ at one point together with the optimizer initialization ?
   for(iter in 1:maxiter){
-    stats[,iter+1] = myKernel$para_update(iter,y,X.intern,mySpline$B,myOptimizer)
+    stats[,iter+1] = myKernel$para_update(iter, y, X.intern, myBasis$B, myOptimizer)
 
     change = abs(stats[2,iter+1] - stats[2,iter])
     if((change < tol) && (iter > 3)){ cat( sprintf("Stopped: change smaller than tolerance after %d iterations\n",iter)); break; }
   }
 
-  if(iter == maxiter) cat("Optimization stopped: maximum iterations reached\n")
+  if(iter == maxiter) {
+    cat("Optimization stopped: maximum iterations reached\n")
+  }
 
-  stats[,iter+2] = myKernel$get_train_stats(y,X.intern,mySpline$B)
+  stats[,iter+2] = myKernel$get_train_stats(y,X.intern,myBasis$B)
 
-  graphics::par(mfrow=c(1,2))
-  graphics::plot(stats[2,3:(iter+2)],type="l",ylab="log Evidence",xlab="Iteration")
-  graphics::plot(stats[1,3:(iter+2)],type="l",ylab="training RMSE",xlab="Iteration")
-  graphics::par(mfrow=c(1,1))
+  graphics::par(mfrow=c(1, 2))
+  graphics::plot(stats[2, 3:(iter+2)], type="l", ylab="log Evidence", xlab="Iteration")
+  graphics::plot(stats[1, 3:(iter+2)], type="l", ylab="training RMSE", xlab="Iteration")
+  graphics::par(mfrow=c(1, 1))
 
-  structure(list(Kernel = myKernel, Spline=mySpline,OptimSettings = list(optim=myoptim,
-                                                                         lr=learning_rate,
-                                                                         momentum = momentum,
-                                                                         beta1 = beta1,
-                                                                         beta2 = beta2,
-                                                                         iter = iter),
-                 moments=moments,
-                 train_data=list(y = y,X = X.intern,Z = Z.intern, Zbinary = isbinary)),
-                 class = "GPspline")
+  structure(list(Kernel = myKernel, Basis = myBasis, OptimSettings = list(optim = myoptim,
+                                                                            lr = learning_rate,
+                                                                            momentum = momentum,
+                                                                            beta1 = beta1,
+                                                                            beta2 = beta2,
+                                                                            iter = iter),
+                 moments = moments,
+                 train_data = list(y = y, X = X.intern, Z = Z.intern, Zbinary = isbinary)),
+                 class = "ace")
 }
 
 #' Fit GPspline, data.frame wrapper of GPspline.train
@@ -209,20 +251,39 @@ GPspline.train <- function(y,X,Z,kernel = "SE",spline="ns",n.knots=1,myoptim = "
 #' marg_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * (2*(z+8) - 2))}
 #' plot(my.GPS,"x2",marginal=TRUE,show.observations=TRUE,truefun=marg_truefun)
 
-GPspline <- function(formula,data,kernel = "SE",spline="ns",n.knots=1,myoptim = "GD",maxiter=1000,tol=1e-4,learning_rate=0.001,beta1=0.9,beta2=0.999,momentum=0.0){
+ace <- function(formula, data,
+                     kernel = "SE",
+                     basis = "ns",
+                     n.knots = 1,
+                     myoptim = "GD",
+                     maxiter = 1000,
+                     tol = 1e-4,
+                     learning_rate = 0.001,
+                     beta1 = 0.9,
+                     beta2 = 0.999,
+                     momentum = 0.0) {
   myformula <- Formula(formula)
-  data <- model.frame(myformula,data)
+  data <- model.frame(myformula, data)
 
-  y <- data[[attr(attr(data, "terms"),"response")]]
-  X <- model.matrix(update(formula(myformula,lhs=0,rhs=1), ~ . + 0),data) #no intercept
-  Z <- model.matrix(update(formula(myformula,lhs=0,rhs=2), ~ . + 0),data) #no intercept
+  y <- data[[attr(attr(data, "terms"), "response")]]
+  X <- model.matrix(update(formula(myformula, lhs=0, rhs=1), ~ . + 0), data) #no intercept
+  Z <- model.matrix(update(formula(myformula, lhs=0, rhs=2), ~ . + 0), data) #no intercept
 
-  out_object <- GPspline.train(y,X,Z,kernel = kernel,spline=spline,n.knots=n.knots,myoptim = myoptim,maxiter=maxiter,tol=tol,
-           learning_rate=learning_rate,beta1=beta1,beta2=beta2,momentum=momentum)
+  out_object <- fitACE.train(y, X, Z,
+                             kernel = kernel,
+                             spline = spline,
+                             n.knots = n.knots,
+                             myoptim = myoptim,
+                             maxiter = maxiter,
+                             tol = tol,
+                             learning_rate = learning_rate,
+                             beta1 = beta1,
+                             beta2 = beta2,
+                             momentum = momentum)
 
-  colnames(out_object$train_data$y) <- all.vars(formula(myformula,lhs=1,rhs=0))
-  colnames(out_object$train_data$X) <- all.vars(formula(myformula,lhs=0,rhs=1))
-  colnames(out_object$train_data$Z) <- all.vars(formula(myformula,lhs=0,rhs=2))
+  colnames(out_object$train_data$y) <- all.vars(formula(myformula, lhs=1, rhs=0))
+  colnames(out_object$train_data$X) <- all.vars(formula(myformula, lhs=0, rhs=1))
+  colnames(out_object$train_data$Z) <- all.vars(formula(myformula, lhs=0, rhs=2))
 
   out_object
 }

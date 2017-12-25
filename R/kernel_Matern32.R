@@ -6,41 +6,40 @@ KernelClass_Matern32 <- setRefClass("Matern32",
                                                   B = "numeric",
                                                   p = "numeric"), #basis dimension
                                     methods = list(
-                                      parainit = function(y,p,B,Z) {
+                                      parainit = function(y, p, B, Z) {
                                         Z <- as.matrix(Z)
                                         B <<- B
                                         p <<- p
                                         n <- length(y)
-                                        parameters <<- matrix(c(log(0.5), #sigma note that we
+                                        parameters <<- matrix(c(0, #sigma note that we
                                                                 0, #mu
-                                                                -log(c(1,diag(t(Z)%*%Z)/n)), #lambda as B(Z) B(Z) becomes very small
-                                                                rep(c(-0.1,rep(0.1,B-1)),p)  #L: for nuisance term -0.1 for others 0.1
+                                                                -log(c(1, diag(t(Z)%*%Z)/n)), #lambda as B(Z) B(Z) becomes very small
+                                                                rep(c(0.1,rep(0.1, B - 1)), p)  #L: for nuisance term -0.1 for others 0.1
                                         ))
                                       },
-                                      kernel_mat = function(X1,X2,Z1,Z2) {
+                                      kernel_mat = function(X1, X2, Z1, Z2) {
                                         #intended use for prediction
-                                        Klist <- kernmat_Matern32_cpp(X1,X2,Z1,Z2,parameters) #lambda and L
-
+                                        Klist <- kernmat_Matern32_cpp(X1, X2, Z1, Z2, parameters) #lambda and L
                                       },
-                                      kernel_mat_sym = function(X,Z) {
+                                      kernel_mat_sym = function(X, Z) {
                                         #intended use for the gradient step
-                                        Klist <- kernmat_Matern32_symmetric_cpp(X,Z,parameters)
+                                        Klist <- kernmat_Matern32_symmetric_cpp(X, Z, parameters)
                                         Kmat <<- Klist$full
                                         Karray <<- Klist$elements
                                         Klist
                                       },
-                                      getinv_kernel = function(X,Z,noeigen=FALSE) {
+                                      getinv_kernel = function(X, Z, noeigen=FALSE) {
                                         #get matrices and return inverse for prediction
-                                        kernel_mat_sym(X,Z)
+                                        kernel_mat_sym(X, Z)
                                         if(noeigen){
-                                          invKmatList <- invkernel_no_eigen_cpp(Kmat,c(parameters[1]))
+                                          invKmatList <- invkernel_no_eigen_cpp(Kmat, c(parameters[1]))
                                         } else {
-                                          invKmatList <- invkernel_cpp(Kmat,c(parameters[1])) #no error handling, return eigenvalues!
+                                          invKmatList <- invkernel_cpp(Kmat, c(parameters[1])) #no error handling, return eigenvalues!
                                         }
                                         invKmatn <<- invKmatList$inv
                                         invKmatList
                                       },
-                                      para_update = function(iter,y,X,Z,Optim,printevery=100) {
+                                      para_update = function(iter, y, X, Z, Optim, printevery=100) {
                                         #update Kmat and invKmat in the class environment
                                         stats <- c(0,0)
                                         invKmatList <- getinv_kernel(X,Z);
@@ -51,44 +50,47 @@ KernelClass_Matern32 <- setRefClass("Matern32",
 
                                         mean_solution(y) #overwrites mu gradient update
 
-                                        if(iter%%printevery == 0){ cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1])) }
+                                        if(iter%%printevery == 0) {
+                                          cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n", iter, stats[2], stats[1]))
+                                        }
 
                                         stats
                                       },
-                                      get_train_stats = function(y,X,Z,invKmatList){
+                                      get_train_stats = function(y, X, Z, invKmatList) {
                                         if(missing(invKmatList)){
                                           #do not update the inverse
-                                          Klist = kernel_mat_sym(X,Z)
-                                          invKmatList <- invkernel_cpp(Klist$full,c(parameters[1]))
+                                          Klist = kernel_mat_sym(X, Z)
+                                          invKmatList <- invkernel_cpp(Klist$full, c(parameters[1]))
                                         }
 
                                         stats <- stats_cpp(y,Kmat, invKmatList$inv,invKmatList$eigenval, parameters[2])
 
                                       },
-                                      mean_solution = function(y){
+                                      mean_solution = function(y) {
                                         #using analytic solution
                                         parameters[2] <<- mu_solution_cpp(y, invKmatn)
                                       },
-                                      predict = function(y,X,Z,X2,Z2,mean_y,std_y){
+                                      predict = function(y, X, Z, X2, Z2, mean_y, std_y) {
                                         n2 <- nrow(X2)
 
-                                        K_xX <- kernel_mat(X2,X,Z2,Z)$full
-                                        K_xx <- kernel_mat_sym(X2,Z2)$full
+                                        K_xX <- kernmat_Matern32_cpp(X2, X, Z2, Z, parameters)$full
+                                        K_xx <- kernmat_Matern32_symmetric_cpp(X2, Z2, parameters)$full
 
-                                        outlist <- pred_cpp(y,parameters[1],parameters[2],invKmatn, K_xX, K_xx, mean_y,std_y)
+                                        outlist <- pred_cpp(y, parameters[1], parameters[2],
+                                                            invKmatn, K_xX, K_xx, mean_y, std_y)
                                       },
                                       predict_marginal = function(y,X,Z,X2,dZ2,mean_y,std_y,std_Z,calculate_ate){
 
-                                        n <- length(y);
-                                        n2 <- nrow(X2);
+                                        n <- length(y)
+                                        n2 <- nrow(X2)
 
-                                        Kmarginal_xX <- kernel_mat(X2,X,dZ2,Z)$elements
-                                        Kmarginal_xx <- kernel_mat_sym(X2,dZ2)$elements
+                                        Kmarginal_xX <- kernmat_Matern32_cpp(X2, X, dZ2, Z, parameters)$elements
+                                        Kmarginal_xx <- kernmat_Matern32_symmetric_cpp(X2, dZ2, parameters)$elements
 
-                                        outlist <- pred_marginal_cpp(y,parameters[1],parameters[2],
+                                        outlist <- pred_marginal_cpp(y, parameters[1], parameters[2],
                                                                      invKmatn,
                                                                      Kmarginal_xX, Kmarginal_xx,
-                                                                     mean_y,std_y,std_Z,calculate_ate)
+                                                                     mean_y, std_y, std_Z, calculate_ate)
                                       }
                                     )
 )
