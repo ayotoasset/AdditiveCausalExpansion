@@ -1,10 +1,10 @@
-# GPspline
+# ACE - AdditiveCausalExpansion
 Package for a varying-coefficients spline regression with GP-regularization of the spline coefficients using a separate set of covariates. The method is designed to combine the predictive capabilities of black-box machine learning methods with the interpretative aspect of parametric models, especially with regards to binary and continuous causal effects.
 
 ## Installation
 It can be installed using (requires appropriate c++ compilers, see the documentation of ```Rcpp```):
 ```
-install.packages("https://github.com/mazphilip/GPspline/raw/master/builds/GPspline_0.2.0.tar.gz", repos = NULL, type = "source")
+install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/GPspline_0.2.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Theory
