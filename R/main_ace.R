@@ -16,57 +16,70 @@
 #' @return The function returns the fitted process as a GPspline class object. Predictions can be obtained using the corresponding S3 methods "prediction" and "marginal".
 #' The latter is the predicted curve with a differentiated basis of Z.
 #' @examples
-#' #Example replicating CausalStump with binary uni-variate Z
-#' #Generate data
-#' library(GPspline)
+#' ## Example replicating CausalStump with binary uni-variate Z
+#' # Generate data
+#' library(ace)
 #' set.seed(1231)
 #' n <- 120
 #' Z <- rbinom(n, 1, 0.3)
 #' X1 <- rnorm(sum(Z), mean = 30,sd = 10)
 #' X0 <- rnorm(n-sum(Z), mean = 20, sd = 10)
-#' X <- matrix(NaN,n,1)
-#' X[Z==1,] <- X1; X[Z==0,] <- X0
-#' sort.idx <- sort(X,index.return=TRUE)$ix
-#' y_truefun <- function(x,z) {mat0 <- matrix(72 + 3 * (x[z==0,]>0)*sqrt(abs(x[z==0,])),sum(z==0),1); mat1 <- matrix(90 + exp(0.06 * x[z==1,]),sum(z==1),1) ; mat <- matrix(NaN,length(z),1); mat[z==0,1] <- mat0; mat[z==1,1] <- mat1; c(mat) }
-#' y0_true <- y_truefun(X,rep(0,n))
-#' y1_true <- y_truefun(X,rep(1,n))
+#' X <- matrix(NaN, n, 1)
+#' X[Z==1, ] <- X1
+#' X[Z==0, ] <- X0
+#' sort.idx <- sort(X, index.return = TRUE)$ix
+#' y_truefun <- function(x,z) {
+#'     mat0 <- matrix(72 + 3 * (x[z == 0,] > 0) * sqrt(abs(x[z == 0, ])), sum(z == 0), 1)
+#'     mat1 <- matrix(90 + exp(0.06 * x[z == 1, ]), sum(z == 1), 1)
+#'     mat <- matrix(NaN, length(z), 1)
+#'     mat[z==0, 1] <- mat0
+#'     mat[z==1, 1] <- mat1
+#'     c(mat)
+#'     }
+#' y0_true <- y_truefun(X, rep(0, n))
+#' y1_true <- y_truefun(X, rep(1, n))
 #' Y0 <- rnorm(n, mean = y0_true, sd = 1)
 #' Y1 <- rnorm(n, mean = y1_true, sd = 1)
-#' Y <- Y0*(1-Z) + Y1*Z
-#' my.GPS <- GPspline.train(Y,X,Z,myoptim="GD",learning_rate=0.0001)
-#' #print (sample) average treatment effect (ATE)
-#' predict(my.GPS,marginal=TRUE,causal=TRUE)$ate_map
+#' Y <- Y0 * (1-Z) + Y1 * Z
+#' # train model:
+#' my.GPS <- ace.train(Y, X, Z, myoptim = "GD", learning_rate = 0.0001)
+#' # print (sample) average treatment effect (ATE)
+#' predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
 #' #true ATE
-#' mean(y1_true-y0_true)
-#' #plot response curves
-#' plot(my.GPS,1,marginal=FALSE,truefun=y_truefun)
-#' #plot treatment curve
-#' treat_truefun <- function(x) {y_truefun(x,rep(1,nrow(x))) - y_truefun(x,rep(0,nrow(x)))}
-#' plot(my.GPS,1,marginal=TRUE,truefun=treat_truefun)
+#' mean(y1_true - y0_true)
+#' # plot response curves
+#' plot(my.GPS, 1, marginal = FALSE, truefun = y_truefun)
+#' # plot treatment curve
+#' treat_truefun <- function(x) {y_truefun(x, rep(1, nrow(x))) - y_truefun(x, rep(0, nrow(x)))}
+#' plot(my.GPS, 1, marginal = TRUE, truefun = treat_truefun)
 #'
-#' #continuous Z
+#' ## Example with continuous Z
 #' set.seed(1234)
 #' n2 <- 200
 #' X2 <- matrix(runif(n2, min = 1, max = 2))
 #' X3 <- matrix(runif(n2, min = 1, max = 2))
-#' X <- data.frame(X2,X3)
-#' Z2 <- rnorm(n2, exp(X2)-10, 1)
-#' y_truefun <- function(x,z) {as.matrix(10*x + (x-1.5) * ((z+9)^2 - 2*z))}
-#' marg_truefun <- function(x,z) {as.matrix( (x-1.5) * (2*(z+9) - 2))}
-#' y2_true <- y_truefun(X2,Z2)
+#' X <- data.frame(X2, X3)
+#' Z2 <- rnorm(n2, exp(X2) - 10, 1)
+#' y_truefun <- function(x, z) {as.matrix(10 * x + (x - 1.5) * ((z + 9)^2 - 2 * z))}
+#' marg_truefun <- function(x, z) {as.matrix( (x - 1.5) * (2 * (z + 9) - 2))}
+#' y2_true <- y_truefun(X2, Z2)
 #' Y2 <- rnorm(n2, mean = y2_true, sd = 2)
-#' marg_true <- marg_truefun(X2,Z2)
-#' my.GPS <- GPspline.train(Y2,X2,Z2,myoptim="GD",learning_rate = 0.0001,spline="cubic",n.knots=1)
-#' plot(my.GPS,1,marginal=F,plot3D=FALSE,truefun=y_truefun)
+#' marg_true <- marg_truefun(X2, Z2)
+#' my.GPS <- ace.train(Y2, X2, Z2,
+#'                     myoptim = "GD",
+#'                     learning_rate = 0.0001,
+#'                     basis = "cubic")
+#' plot(my.GPS, 1, truefun = y_truefun)
 #' my.pred <- predict(my.GPS)
-#' #quality of prediction
-#' plot(Y2,my.pred$map); abline(0,1,lty=2)
-#' #comparison with the true curve:
-#' plot(my.GPS,1,marginal=FALSE,truefun = y_truefun)
-#' #plotting of the marginal curve:
-#' plot(my.GPS,1,marginal=TRUE)
-#' #plot of the 2D curve with only Z
-#' plot(my.GPS,marginal=FALSE,truefun=y_truefun)
+#' # plot quality of prediction:
+#' plot(Y2, my.pred$map)
+#' abline(0, 1, lty = 2)
+#' # comparison with the true curve:
+#' plot(my.GPS, 1, truefun = y_truefun)
+#' # plotting of the marginal curve:
+#' plot(my.GPS, 1, marginal=TRUE)
+#' # plot of the 2D curve with only Z
+#' plot(my.GPS, truefun = y_truefun)
 #'
 
 ace.train <- function(y, X, Z,
@@ -233,23 +246,29 @@ ace.train <- function(y, X, Z,
 #' @param momentum (default: 0.0) Momentum for the empirical Bayes optimization when using Nesterov. Equivalent to gradient descent ("GD") if momentum is 0.
 #' @return GPspline object that can be used for prediction and plotting
 #' @examples
-#' #continuous Z
+#' ## Example continuous treatment Z
 #' set.seed(1234)
 #' n2 <- 300
 #' df <- data.frame(x = runif(n2, min = 1, max = 2))
 #' df$x2 <- runif(n2, min = -1, max = 1)
-#' df$z = rnorm(n2, exp(df$x)-14, 1)
-#' y_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * ((z+8)^2 - 2*z))}
-#' y2_true <- y_truefun(df[,c("x","x2")],df$z)
-#' df$y <- rnorm(n2, mean = y2_true, sd = 1)
-#' my.GPS <- GPspline(y ~ x + x2 | z,data=df,myoptim="GD",learning_rate = 0.0001,spline="ns",n.knots=2)
+#' df$z = rnorm(n2, exp(df$x) - 14, 1)
+#' y_truefun <- function(x, z) {as.matrix(sqrt(x[, 1]) + x[, 2] *3 * ((z + 8)^2 - 2 * z))}
+#' y2_true <- y_truefun(df[, c("x", "x2")], df$z)
+#' df$y <- rnorm(n2, mean = y2_true, sd = 2)
+#' my.GPS <- ace(y ~ x + x2 | z,
+#'               data = df,
+#'               myoptim = "GD",
+#'               learning_rate = 0.0001,
+#'               basis = "ns",
+#'               n.knots = 2)
 #' my.pred <- predict(my.GPS)
-#' plot(df$y,my.pred$map); abline(0,1,lty=2)
-#' #prediction of the curve
-#' plot(my.GPS,"x2",marginal=FALSE,plot3D=TRUE)
-#' #difference to the true marginal curve:
-#' marg_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * (2*(z+8) - 2))}
-#' plot(my.GPS,"x2",marginal=TRUE,show.observations=TRUE,truefun=marg_truefun)
+#' plot(df$y, my.pred$map)
+#' abline(0, 1, lty=2)
+#' # prediction of the curve
+#' plot(my.GPS, "x2", plot3D = TRUE)
+#' # difference to the true marginal curve:
+#' # marg_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * (2*(z+8) - 2))}
+#' # plot(my.GPS,"x2",marginal=TRUE,show.observations=TRUE,truefun=marg_truefun)
 
 ace <- function(formula, data,
                      kernel = "SE",
@@ -269,9 +288,9 @@ ace <- function(formula, data,
   X <- model.matrix(update(formula(myformula, lhs=0, rhs=1), ~ . + 0), data) #no intercept
   Z <- model.matrix(update(formula(myformula, lhs=0, rhs=2), ~ . + 0), data) #no intercept
 
-  out_object <- fitACE.train(y, X, Z,
+  out_object <- ace.train(y, X, Z,
                              kernel = kernel,
-                             spline = spline,
+                             basis = basis,
                              n.knots = n.knots,
                              myoptim = myoptim,
                              maxiter = maxiter,
