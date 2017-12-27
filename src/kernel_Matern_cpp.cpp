@@ -458,7 +458,7 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
       break;
     case 1: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern32_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), B);
       break;
-    case 2: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern52_gradients(X,Z, tmpK, K, parameters.rows(2+B,1+B*(px+1)), parameters.rows(2,1+B), B);
+    case 2: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern52_gradients(X, Z, tmpK, K, parameters.rows(2+B,1+B*(px+1)), parameters.rows(2,1+B), B);
   }
 
   //mu - gradient approach
@@ -472,12 +472,12 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
 
   //clip gradients
   //umat idx=(gradients>20);
-  for(unsigned int g=0; g<gradients.size();g++){
+  /*for(unsigned int g=0; g<gradients.size();g++){
     if(gradients(g)>20){
       gradients.row(g) = 20;
     } else if(gradients(g)<-20) {
       gradients.row(g) = -20;
     }
-  }
+  }*/
   return gradients;
 }

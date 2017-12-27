@@ -3,6 +3,13 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
+double mu_solution_cpp(arma::colvec& y,
+                       arma::mat& invKmat) {
+  // calculates the exact solutions to the maximization problem
+  return  0.5 * arma::sum(invKmat * y) / arma::sum(arma::sum(invKmat));
+}
+
+// [[Rcpp::export]]
 arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
   unsigned int px = X.n_cols;
   unsigned int pz = Z.n_cols;

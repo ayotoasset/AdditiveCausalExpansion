@@ -30,21 +30,21 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
     newZ.intern <- as.matrix(data.table::copy(newZ))
 
     if (ncol(newX.intern) != ncol(object$train_data$X)) {
-      stop("Error: Dimension mismatch of X with newX", call. = FALSE)
+      stop("Dimension mismatch of X with newX", call. = FALSE)
     }
     if ((ncol(newZ.intern) != ncol(object$train_data$Z)) && (length(newZ) != 1)) {
-      stop("Error: Dimension mismatch of Z with newZ", call. = FALSE)
+      stop("Dimension mismatch of Z with newZ", call. = FALSE)
     }
-    if (length(newZ)==1){
+    if (length(newZ) == 1) {
       newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
     }
     #normalize the non-binary variables
     normalize_test(newX.intern, newZ.intern, object$moments)
   }
 
-  if (any(abs(newX.intern) > 1)){
+  if (any(abs(newX.intern) >= 1)){
     cat("Some values of X outside the unit-circle of the training data.\n")
-    apply(abs(newX.intern), 2, max)
+    #apply(abs(newX.intern), 2, max)
   }
 
   #get appropriate basis
@@ -69,3 +69,4 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
   }
   pred_list
 }
+

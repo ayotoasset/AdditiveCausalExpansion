@@ -4,7 +4,7 @@ This is a package for a varying-coefficient regression with Gaussian process pri
 ## Installation
 It can be installed using (requires appropriate c++ compilers, see the documentation of ```Rcpp```):
 ```
-install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/GPspline_0.2.0.tar.gz", repos = NULL, type = "source")
+install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/ace_0.3.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Theory
@@ -24,26 +24,33 @@ This constitutes a proper covariance Mercer kernel (sum of a product of kernels)
 
 ## Example
 ```
-library(GPspline)
+library(ace)
 set.seed(1234)
 n2 <- 300
 df <- data.frame(x = runif(n2, min = 1, max = 2))
 df$x2 <- runif(n2, min = -1, max = 1)
-df$z = rnorm(n2, exp(df$x)-14, 1)
-y_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * ((z+8)^2 - 2*z))}
-y2_true <- y_truefun(df[,c("x","x2")],df$z)
+df$z  <- rnorm(n2, exp(df$x) - 14, 1)
+y_truefun <- function(x, z) {
+    as.matrix(sqrt(x[, 1]) + x[, 2] * 3 * ((z + 8)^2 - 2 * z))
+}
+y2_true <- y_truefun(df[, c("x", "x2")], df$z)
 df$y <- rnorm(n2, mean = y2_true, sd = 1)
-my.GPS <- GPspline(y ~ x + x2 | z,data=df,myoptim="GD",learning_rate = 0.0001,spline="B",n.knots=6)
+my.GPS <- ace(y ~ x + x2 | z, data = df, 
+              spline = "B", n.knots = 6,
+              myoptim = "GD", learning_rate = 0.0001)
 my.pred <- predict(my.GPS)
-plot(df$y,my.pred$map); abline(0,1,lty=2)
+plot(df$y, my.pred$map)
+abline(0, 1, lty = 2)
 #prediction of the curve as contour
-plot(my.GPS,"x2",marginal=FALSE,show.observations=TRUE)
+plot(my.GPS, "x2", show.observations = TRUE)
 #prediction of the curve in 3D
-plot(my.GPS,"x2",marginal=FALSE,plot3D=TRUE,show.observations=TRUE)
+plot(my.GPS, "x2", plot3D = TRUE, show.observations = TRUE)
 
 #difference to the true marginal curve
-marg_truefun <- function(x,z) {as.matrix(sqrt(x[,1]) + x[,2] *3 * (2*(z+8) - 2))}
-plot(my.GPS,"x2",marginal=TRUE,show.observations=TRUE,truefun=marg_truefun)
+marg_truefun <- function(x, z) {
+    as.matrix(sqrt(x[, 1]) + x[, 2] * 3 * (2 * (z + 8) - 2))
+}
+plot(my.GPS, "x2", marginal = TRUE, show.observations = TRUE, truefun = marg_truefun)
 ```
 
 ![](example/readme.png)

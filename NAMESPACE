@@ -1,15 +1,11 @@
-useDynLib(ace, .registration = TRUE)
+useDynLib(ace)
 #exportPattern("^[[:alpha:]]+")
+
 importFrom(Rcpp, evalCpp)
-importFrom("methods", "new")
-importFrom("stats", "formula")
-importFrom("stats", "model.matrix")
-#S3method("formula", "formula")
-#importFrom("Formula", "model.matrix")
-#S3method(predict, myclass)
+importFrom(methods, new)
+
 exportPattern(ace)
 exportPattern(ace.train)
-#exportPattern(NewtonStep)
 S3method("predict", "ace")
 S3method("plot", "ace")
 

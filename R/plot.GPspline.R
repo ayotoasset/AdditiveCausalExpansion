@@ -14,16 +14,22 @@
 #' @return Returns the plotly object
 
 
-plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=TRUE,Xlim = c(-1,1),Xstep = 0.1,Zlim = c(-1,1),Zstep = 0.1,truefun){
+plot.ace <- function(object, Xcol, marginal = FALSE, plot3D = FALSE, show.observations = TRUE,
+                     Xlim = c(-1,1), Xstep = 0.1, Zlim = c(-1,1), Zstep = 0.1, truefun) {
+
+  # TODO: follow style guide
+  # TODO: Doesnt look nice with discrete X variables
+
+  graphics::par(mfrow=c(1, 1))
   #For the colors see http://jfly.iam.u-tokyo.ac.jp/color/#what
-  Blue100    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-0)*255/100)
-  Blue50    <- grDevices::rgb(0, 114, 178, max=255, alpha = (100-50)*255/100)
-  BlueishGreen50 <- grDevices::rgb(0, 158, 115, max=255, alpha = (100-50)*255/100)
-  BlueishGreen100 <- grDevices::rgb(0, 158, 115, max=255, alpha = (100-0)*255/100)
-  SkyBlue100 <- grDevices::rgb(86, 180, 233, max=255, alpha = (100-0)*255/100)
-  Orange100  <- grDevices::rgb(230, 159, 0, max=255, alpha = (100-0)*255/100)
-  Vermillion50  <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-50)*255/100)
-  Vermillion100 <- grDevices::rgb(213, 94, 0, max=255, alpha = (100-0)*255/100)
+  Blue100         <- grDevices::rgb(0,   114, 178, max=255, alpha = (100 -  0)*255/100)
+  Blue50          <- grDevices::rgb(0,   114, 178, max=255, alpha = (100 - 50)*255/100)
+  BlueishGreen50  <- grDevices::rgb(0,   158, 115, max=255, alpha = (100 - 50)*255/100)
+  BlueishGreen100 <- grDevices::rgb(0,   158, 115, max=255, alpha = (100 -  0)*255/100)
+  SkyBlue100      <- grDevices::rgb(86,  180, 233, max=255, alpha = (100 -  0)*255/100)
+  Orange100       <- grDevices::rgb(230, 159,   0, max=255, alpha = (100 -  0)*255/100)
+  Vermillion50    <- grDevices::rgb(213,  94,   0, max=255, alpha = (100 - 50)*255/100)
+  Vermillion100   <- grDevices::rgb(213,  94,   0, max=255, alpha = (100 -  0)*255/100)
 
   px <- ncol(object$train_data$X)
   pz <- 1
@@ -34,8 +40,8 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
   medX= matrix(NaN,1,px)
   quantX= matrix(NaN,3,px)
   for(i in 1:px){
-    quantX[,i] <- quantile(object$train_data$X[,i] * object$moments[(i+1),2] + object$moments[(i+1),1],probs=c(0.25,0.5,0.75))
-    medX[1,i] <- median(object$train_data$X[,i] * object$moments[(i+1),2] + object$moments[(i+1),1])
+    quantX[,i] <- stats::quantile(object$train_data$X[,i] * object$moments[(i+1),2] + object$moments[(i+1),1],probs=c(0.25,0.5,0.75))
+    medX[1,i] <- stats::median(object$train_data$X[,i] * object$moments[(i+1),2] + object$moments[(i+1),1])
   }
 
   if(!missing(Xcol)) {
@@ -48,38 +54,43 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
     }
     else if(is.character(Xcol) && (Xcol %in% colnames(object$train_data$X))) {
       nXcol <- Xcol
-      idx <- (Xcol == colnames(object$train_data$X))
+      idx  <- (Xcol == colnames(object$train_data$X))
       Xcol <- which(idx)
-      idx <- idx*1L
+      idx  <- as.integer(idx)
     }
 
     if(!missing(Xlim)) { Xlim = (Xlim - object$moments[1+Xcol,1])   / object$moments[1+Xcol,2]; }
     if(!missing(Xstep)){ Xstep = (Xstep - object$moments[1+Xcol,1]) / object$moments[1+Xcol,2]; }
     nx <- length(seq(min(Xlim),max(Xlim),by=Xstep))
 
-    Xgrid <- seq(min(Xlim),max(Xlim),by=Xstep) * object$moments[1+Xcol,2] + object$moments[1+Xcol,1]
+    Xgrid <- seq(min(Xlim), max(Xlim), by=Xstep) * object$moments[1 + Xcol, 2] + object$moments[1 + Xcol, 1]
   }
 
   if(show.observations){
     if(!missing(Xcol)){
-      obsX <- object$train_data$X[,Xcol] * object$moments[1+Xcol,2]+ object$moments[1+Xcol,1]
+      obsX <- object$train_data$X[,Xcol] * object$moments[1 + Xcol, 2]+ object$moments[1 + Xcol, 1]
     }
-    obsZ <- object$train_data$Z *        object$moments[1+px+pz,2] + object$moments[1+px+pz,1]
-    obsY <- object$train_data$y * object$moments[1,2] + object$moments[1,1]
+    obsZ <- object$train_data$Z * object$moments[1 + px + pz, 2]
+            + object$moments[1 + px + pz, 1]
+    obsY <- object$train_data$y * object$moments[1, 2]
+            + object$moments[1, 1]
   }
 
-  if(!object$train_data$Zbinary){
-    if(marginal && show.observations){ cat("Observations for marginal predictions use predicted value as the true marginal is not observed\n") }
-
-    if(missing(truefun)){
-      if(marginal==TRUE){
+  if (!object$train_data$Zbinary) {
+    if(marginal && show.observations){
+      cat("Observations for marginal predictions use predicted value as the true marginal is not observed\n")
+    }
+    if (missing(truefun)) {
+      if (marginal==TRUE) {
         y.label <- "Marginal Y"
       } else {
         y.label <- "Outcome Y"
       }
     } else {
-      if(show.observations){ cat("True values subtracted from Observations\n") }
-      if(marginal==TRUE){
+      if (show.observations) {
+        cat("True values subtracted from Observations\n")
+      }
+      if (marginal==TRUE) {
         y.label <- "Diff. to true marg. Y"
       } else {
         y.label <- "Diff. to true Y"
@@ -104,24 +115,26 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
       surface <- predict(object,newX = as.matrix(Xgrid2),newZ = grid$Z,marginal=marginal)
 
       if(marginal && show.observations){
-        invisible(capture.output(obsY <- predict(object,marginal=TRUE)$map)) #surpress output as it is expected
+        invisible(utils::capture.output(obsY <- predict(object ,marginal = TRUE)$map))
       }
 
       #truefun for simulation
-      if(missing(truefun)){
-        grid$Y <- surface$map
-        gridL = grid; gridU = grid;
-        gridL$Y <- surface$ci[,1]
-        gridU$Y <- surface$ci[,2]
+      if (missing(truefun)) {
+        grid$Y  <- surface$map
+        gridL   <- grid
+        gridU   <- grid
+        gridL$Y <- surface$ci[, 1]
+        gridU$Y <- surface$ci[, 2]
       } else {
         #Xgrid2_notnormalized = Xgrid2
         #only single dimensional X right now:
         true <- truefun(grid$X,# * object$moments[1+Xcol,2] + object$moments[1+Xcol,1],
                         grid$Z)# * object$moments[1+px+pz,2] + object$moments[1+px+pz,1])
-        gridT <- grid
+        gridT   <- grid
         gridT$Y <- true
-        grid$Y <- surface$map #- true
-        gridL = grid; gridU = grid;
+        grid$Y  <- surface$map #- true
+        gridL   <- grid
+        gridU   <- grid
         gridL$Y <- surface$ci[,1] #- true
         gridU$Y <- surface$ci[,2] #- true
 
@@ -133,7 +146,7 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
 
       }
 
-      if(requireNamespace("plotly", quietly = TRUE) && (plot3D==TRUE)){ #!plotly
+      if(requireNamespace("plotly", quietly = TRUE) && (plot3D == TRUE)) { #!plotly
         ## plotly ####
         Xgrid <- matrix(Xgrid,nx,nz)
         Zgrid <- t(matrix(Zgrid,nz,nx))
@@ -159,22 +172,25 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
               yaxis = list(title = "Treatment Z"),
               zaxis = list(title = y.label)
             ))
-        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(grid$Y,nx,nz),name="MAP")
-        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridL$Y,nx,nz),opacity = 0.5,name="Lower CI")
-        p <- plotly::add_surface(p,x = ~Xgrid, y = ~Zgrid,z = ~matrix(gridU$Y,nx,nz),opacity = 0.5,name="Upper CI")
+        p <- plotly::add_surface(p, x = ~Xgrid, y = ~Zgrid, z = ~matrix(grid$Y,nx,nz),name="MAP")
+        p <- plotly::add_surface(p, x = ~Xgrid, y = ~Zgrid, z = ~matrix(gridL$Y,nx,nz),opacity = 0.5,name="Lower CI")
+        p <- plotly::add_surface(p, x = ~Xgrid, y = ~Zgrid, z = ~matrix(gridU$Y,nx,nz),opacity = 0.5,name="Upper CI")
 
         p
 
-      } else if(requireNamespace("ggplot2", quietly = TRUE)) {
-        if(plot3D==TRUE){cat("plotly package not found. Proceeding with contour plots")}
+      } else if (requireNamespace("ggplot2", quietly = TRUE)) {
+        if (plot3D == TRUE) {
+          cat("plotly package not found. Proceeding with contour plots")
+        }
         cat("Plotting with ggplot2\n")
 
         g <- ggplot2::ggplot(data.frame(x=grid$X,y=grid$Z,z=grid$Y), ggplot2::aes(x=x,y=y)) +
           ggplot2::geom_tile(ggplot2::aes(fill=z)) +
           ggplot2::scale_fill_gradient2(low=Blue100, high=Vermillion100,name=y.label)
-        if(show.observations){
-          g <- g + ggplot2::geom_point(data=data.frame(xobs=obsX,yobs=c(obsZ)),ggplot2::aes(x = xobs, y = yobs),
-                              pch = 21,inherit.aes = FALSE,show.legend=TRUE)
+        if (show.observations){
+          g <- g + ggplot2::geom_point(data = data.frame(xobs = obsX, yobs = c(obsZ)),
+                                       ggplot2::aes(x = "xobs", y = "yobs"),
+                                       pch = 21, inherit.aes = FALSE, show.legend = TRUE)
         }
 
         g <- g + ggplot2::scale_x_continuous(name=paste0("Control ",nXcol),expand=c(0,0)) +
@@ -202,14 +218,18 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
         filled.contour.lvls <- sort(unique(c(seq(min(grid$Y), 0, length.out = n_levels_neg),0,
                                  seq(0, max(grid$Y), length.out = n_levels_pos))),decreasing = FALSE)
 
-        filled.contour.cols <- colorRampPalette(c("white","darkgray"))(length(filled.contour.lvls) - 1)
+        filled.contour.cols <- grDevices::colorRampPalette(c("white","darkgray"))(length(filled.contour.lvls) - 1)
 
         graphics::filled.contour(x=Xgrid,y=Zgrid,z=matrix(grid$Y,nz,nx),axes=TRUE,
                                  xlab=paste0("Control ",nXcol),ylab="Z",
                                  col=filled.contour.cols, levels=filled.contour.lvls,
-                                 plot.axes = { axis(1)
-                                               axis(2)
-                                               if(show.observations){points(obsX, obsZ,cex=0.5)} })
+                                 plot.axes = { graphics::axis(1)
+                                               graphics::axis(2)
+                                               if(show.observations){
+                                                 graphics::points(obsX, obsZ,cex=0.5)
+                                                 }
+                                               }
+                                 )
       }
     } else { #if not column of X selected
       cat("No column of X selected. Proceeding with 2D plot with respect to Z\n")
@@ -232,14 +252,13 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
         obsZ <- NULL
         y_limit <- c(min(YgridL),max(YgridU))
       }
-      plot(obsZ, obsY, xlim=range(Zgrid),cex=0.5,ylab=y.label,xlab="Basis expanded Z",ylim = y_limit)
-      grid()
+      graphics::plot(obsZ, obsY, xlim=range(Zgrid),cex=0.5,ylab=y.label,xlab="Basis expanded Z",ylim = y_limit)
+      graphics::grid()
       if(!missing(truefun)){
-        lines(Zgrid,truefun(Xgrid,Zgrid),lty=2,lwd=1.5)
+        graphics::lines(Zgrid,truefun(Xgrid,Zgrid),lty=2,lwd=1.5)
       }
-      lines(Zgrid,Ygrid,lty=2,lwd=2,col=Vermillion100)
-
-      polygon(c(Zgrid, rev(Zgrid)),c(YgridL,rev(YgridU)),col = Vermillion50, border = FALSE)
+      graphics::lines(Zgrid,Ygrid,lty=2,lwd=2,col=Vermillion100)
+      graphics::polygon(c(Zgrid, rev(Zgrid)),c(YgridL,rev(YgridU)),col = Vermillion50, border = FALSE)
     }
   } else {
     #Binary Z
@@ -262,11 +281,9 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
     if(!missing(Xcol)){
       cat("Proceeding to plot binary Z\n")
 
-      obsZ <- object$train_data$Z
-      Xgrid2 <- t(matrix(rep(medX,nx),px,nx))
+      obsZ          <- object$train_data$Z
+      Xgrid2        <- t(matrix(rep(medX,nx),px,nx))
       Xgrid2[,Xcol] <- Xgrid
-
-      cat(dim(Xgrid2))
 
       if(marginal){
         #one curve ("treatment effect")
@@ -286,8 +303,8 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
         }
       } else {
         #two curves
-        surface0 <- predict(object,matrix(Xgrid2),0,marginal=FALSE)
-        surface1 <- predict(object,matrix(Xgrid2),1,marginal=FALSE)
+        surface0 <- predict(object,as.matrix(Xgrid2),0,marginal=FALSE)
+        surface1 <- predict(object,as.matrix(Xgrid2),1,marginal=FALSE)
 
         if(show.observations){
           y_limit <- c(min(surface0$ci[,1],surface1$ci[,1],obsY),
@@ -297,10 +314,11 @@ plot.ace <- function(object,Xcol,marginal=FALSE,plot3D=FALSE,show.observations=T
                        max(surface0$ci[,2],surface1$ci[,2]))
         }
 
-        graphics::plot(Xgrid,surface0$map,col=Blue100,lwd=2,ylim=y_limit,type="l",xlab=paste0("Control ",nXcol),ylab=paste0(y.label," (blue: Z=1,red: Z=0)"))
-        graphics::polygon(c(Xgrid,rev(Xgrid)),c(surface0$ci[,1],rev(surface0$ci[,2])),col=Blue50,density=20)
-        graphics::lines(Xgrid,surface1$map,col=Vermillion100,lwd=2)
-        graphics::polygon(c(Xgrid,rev(Xgrid)),c(surface1$ci[,1],rev(surface1$ci[,2])),col=Vermillion50,density=20)
+        graphics::plot(Xgrid, surface0$map, col=Blue100, lwd=2, ylim=y_limit,
+                       type="l", xlab=paste0("Control ", nXcol), ylab=paste0(y.label, " (blue: Z=1,red: Z=0)"))
+        graphics::polygon(c(Xgrid, rev(Xgrid)), c(surface0$ci[, 1], rev(surface0$ci[, 2])), col=Blue50, density=20, angle = -45)
+        graphics::lines(Xgrid, surface1$map,col=Vermillion100, lwd=2)
+        graphics::polygon(c(Xgrid, rev(Xgrid)), c(surface1$ci[, 1], rev(surface1$ci[, 2])), col=Vermillion50, density=20)
         if(!missing(truefun)){
           graphics::lines(Xgrid,truefun((Xgrid2),rep(0,nx)),lty=2)
           graphics::lines(Xgrid,truefun((Xgrid2),rep(1,nx)),lty=2)
