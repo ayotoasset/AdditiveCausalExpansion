@@ -20,7 +20,9 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
 
   } else if (!missing(newX) && missing(newZ)){
     newX.intern <- as.matrix(data.table::copy(newX))
-    cat("No newZ given, using 0.\n")
+    if (!marginal) {
+      cat("No newZ given, using 0.\n")
+    }
     newZ.intern <- matrix(rep(0, nrow(newX.intern)), nrow(newX.intern), 1)
     #normalize the non-binary variables
     normalize_test(newX.intern, newZ.intern, object$moments)
