@@ -4,9 +4,10 @@
 \alias{ace}
 \title{Fit GPspline, data.frame wrapper of GPspline.train}
 \usage{
-ace(formula, data, kernel = "SE", basis = "ns", n.knots = 1,
-  myoptim = "GD", maxiter = 1000, tol = 1e-04, learning_rate = 0.001,
-  beta1 = 0.9, beta2 = 0.999, momentum = 0)
+ace(formula, data, kernel = "SE", basis = "linear", n.knots = 1,
+  optimizer = "Nadam", maxiter = 1000, tol = 1e-04,
+  learning_rate = 0.001, beta1 = 0.9, beta2 = 0.999, momentum = 0,
+  norm.clip = TRUE, clip.at = 1)
 }
 \arguments{
 \item{formula}{Formula of the form \code{y ~ x | z} where the \code{x} variables determine the coefficients of the (spline) basis expansion of \code{z}.}
@@ -19,7 +20,7 @@ ace(formula, data, kernel = "SE", basis = "ns", n.knots = 1,
 
 \item{n.knots}{An integer denoting the  umber of internal knots of the spline of Z}
 
-\item{myoptim}{A string (default: "GD" gradient descent). Other options are "Nesterov" (accelerated gradient/momentum), "Adam", and "Nadam" (Nesterov-Adam).}
+\item{optimizer}{A string (default: "GD" gradient descent). Other options are "Nesterov" (accelerated gradient/momentum), "Adam", and "Nadam" (Nesterov-Adam).}
 
 \item{maxiter}{(default: 5000) Maximum number of iterations of the empirical Bayes optimization}
 
@@ -51,7 +52,7 @@ y2_true <- y_truefun(df[, c("x", "x2")], df$z)
 df$y <- rnorm(n2, mean = y2_true, sd = 2)
 my.GPS <- ace(y ~ x + x2 | z,
               data = df,
-              myoptim = "GD",
+              optimizer = "GD",
               learning_rate = 0.0001,
               basis = "ns",
               n.knots = 2)

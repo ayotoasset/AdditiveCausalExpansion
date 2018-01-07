@@ -5,8 +5,9 @@
 \title{Fit a VCM basis model with Gaussian process priors on the coefficients}
 \usage{
 ace.train(y, X, Z, kernel = "SE", basis = "linear", n.knots = 1,
-  myoptim = "Nadam", maxiter = 1000, tol = 1e-04, learning_rate = 0.001,
-  beta1 = 0.9, beta2 = 0.999, momentum = 0)
+  optimizer = "Nadam", maxiter = 1000, tol = 1e-04,
+  learning_rate = 0.01, beta1 = 0.9, beta2 = 0.999, momentum = 0,
+  norm.clip = TRUE, clip.at = 1)
 }
 \arguments{
 \item{y}{A numeric vector}
@@ -21,7 +22,7 @@ ace.train(y, X, Z, kernel = "SE", basis = "linear", n.knots = 1,
 
 \item{n.knots}{An integer denoting the  umber of internal knots of the spline of Z. Ignored if basis not a spline.}
 
-\item{myoptim}{A string (default: "Nadam" Nesterov-accelerated Adam). Other options are "GD" (gradient descent), "Nesterov" (accelerated gradient/momentum), "Adam".}
+\item{optimizer}{A string (default: "Nadam" Nesterov-accelerated Adam). Other options are "GD" (gradient descent), "Nesterov" (accelerated gradient/momentum), "Adam".}
 
 \item{maxiter}{(default: 1000) Maximum number of iterations of the empirical Bayes optimization}
 
@@ -69,7 +70,7 @@ Y0 <- rnorm(n, mean = y0_true, sd = 1)
 Y1 <- rnorm(n, mean = y1_true, sd = 1)
 Y <- Y0 * (1-Z) + Y1 * Z
 # train model:
-my.GPS <- ace.train(Y, X, Z, myoptim = "GD", learning_rate = 0.0001)
+my.GPS <- ace.train(Y, X, Z, optimizer = "GD", learning_rate = 0.0001)
 # print (sample) average treatment effect (ATE)
 predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
 #true ATE
@@ -93,7 +94,7 @@ y2_true <- y_truefun(X2, Z2)
 Y2 <- rnorm(n2, mean = y2_true, sd = 2)
 marg_true <- marg_truefun(X2, Z2)
 my.GPS <- ace.train(Y2, X2, Z2,
-                    myoptim = "Nadam",
+                    optimizer = "Nadam",
                     learning_rate = 0.01,
                     basis = "ncs")
 plot(my.GPS, 1, truefun = y_truefun)

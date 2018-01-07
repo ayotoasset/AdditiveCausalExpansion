@@ -6,7 +6,7 @@
 #' @param kernel A string (default: "SE" Squared exponential with ARD) -- has no effect, might include (ARD) polynomial and "Matern32", the Matern 3/2 kernel with ARD
 #' @param basis A string (default: "binary" if Z is binary (factor) and "ns", natural cubic spline, for continuous or discrete Z
 #' @param n.knots An integer denoting the  umber of internal knots of the spline of Z. Ignored if basis not a spline.
-#' @param myoptim A string (default: "Nadam" Nesterov-accelerated Adam). Other options are "GD" (gradient descent), "Nesterov" (accelerated gradient/momentum), "Adam".
+#' @param optimizer A string (default: "Nadam" Nesterov-accelerated Adam). Other options are "GD" (gradient descent), "Nesterov" (accelerated gradient/momentum), "Adam".
 #' @param maxiter  (default: 1000) Maximum number of iterations of the empirical Bayes optimization
 #' @param tol (default: 1e-4) Stopping tolerance for the empirical Bayes optimization
 #' @param learning_rate (default: 0.001) Learning rate for the empirical Bayes optimization
@@ -42,7 +42,7 @@
 #' Y1 <- rnorm(n, mean = y1_true, sd = 1)
 #' Y <- Y0 * (1-Z) + Y1 * Z
 #' # train model:
-#' my.GPS <- ace.train(Y, X, Z, myoptim = "GD", learning_rate = 0.0001)
+#' my.GPS <- ace.train(Y, X, Z, optimizer = "GD", learning_rate = 0.0001)
 #' # print (sample) average treatment effect (ATE)
 #' predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
 #' #true ATE
@@ -66,7 +66,7 @@
 #' Y2 <- rnorm(n2, mean = y2_true, sd = 2)
 #' marg_true <- marg_truefun(X2, Z2)
 #' my.GPS <- ace.train(Y2, X2, Z2,
-#'                     myoptim = "Nadam",
+#'                     optimizer = "Nadam",
 #'                     learning_rate = 0.01,
 #'                     basis = "ncs")
 #' plot(my.GPS, 1, truefun = y_truefun)
@@ -83,16 +83,18 @@
 #'
 
 ace.train <- function(y, X, Z,
-                         kernel="SE",
-                         basis="linear",
-                         n.knots=1,
-                         myoptim = "Nadam",
-                         maxiter = 1000,
-                         tol = 1e-4,
-                         learning_rate = 0.001,
-                         beta1 = 0.9,
-                         beta2 = 0.999,
-                         momentum = 0.0){
+                      kernel        = "SE",
+                      basis         = "linear",
+                      n.knots       = 1,
+                      optimizer     = "Nadam",
+                      maxiter       = 1000,
+                      tol           = 1e-4,
+                      learning_rate = 0.01,
+                      beta1         = 0.9,
+                      beta2         = 0.999,
+                      momentum      = 0.0,
+                      norm.clip     = TRUE,
+                      clip.at       = 1) {
 
   if (class(y) == "factor") {
     stop("y is not numeric. This package does not support classification tasks.")
@@ -183,15 +185,15 @@ ace.train <- function(y, X, Z,
   myKernel$parainit(y, px, myBasis$dim(), myBasis$B)
 
   #initialize optimizer
-  if(myoptim=="Adam") {
-    myOptimizer = optAdam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2)
-  } else if(myoptim=="Nadam") {
-    myOptimizer = optNadam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2)
-  } else if(myoptim == "GD" || myoptim=="Nesterov") {
-    if(myoptim == "GD") {
+  if(optimizer=="Adam") {
+    myOptimizer = optAdam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2, norm.clip =  norm.clip, clip.at = clip.at)
+  } else if(optimizer=="Nadam") {
+    myOptimizer = optNadam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2, norm.clip =  norm.clip, clip.at = clip.at)
+  } else if(optimizer == "GD" || optimizer=="Nesterov") {
+    if(optimizer == "GD") {
       momentum = 0.0
     }
-    myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum)
+    myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum,norm.clip =  norm.clip, clip.at = clip.at)
   }
   # initialize optimization help variables (mu, nu, etc.)
   myOptimizer$initOpt(myKernel)
@@ -209,8 +211,8 @@ ace.train <- function(y, X, Z,
       break
       }
   }
-
-  if(iter == maxiter) {
+  convergence.flag = (iter == maxiter)
+  if(!convergence.flag) {
     cat("Optimization stopped: maximum iterations reached\n")
   }
 
@@ -221,7 +223,7 @@ ace.train <- function(y, X, Z,
   graphics::plot(stats[1, 3:(iter + 2)], type="l", ylab="training RMSE", xlab="Iteration")
   graphics::par(mfrow=c(1, 1))
 
-  structure(list(Kernel = myKernel, Basis = myBasis, OptimSettings = list(optim = myoptim,
+  structure(list(Kernel = myKernel, Basis = myBasis, OptimSettings = list(optim = optimizer,
                                                                             lr = learning_rate,
                                                                             momentum = momentum,
                                                                             beta1 = beta1,
@@ -229,6 +231,7 @@ ace.train <- function(y, X, Z,
                                                                             iter = iter),
                  moments = moments,
                  train_data = list(y = y, X = X.intern, Z = Z.intern, Zbinary = isbinary)),
+                 convergence = convergence.flag,
                  class = "ace")
 }
 
@@ -238,7 +241,7 @@ ace.train <- function(y, X, Z,
 #' @param kernel A string (default: "SE" Squared exponential with ARD) -- has no effect, might include (ARD) polynomial and Matern 5/2 kernel
 #' @param basis A string (default: "ns" natural cubic spline for continuous or discrete Z and "binary" if Z is binary (factor)
 #' @param n.knots An integer denoting the  umber of internal knots of the spline of Z
-#' @param myoptim A string (default: "GD" gradient descent). Other options are "Nesterov" (accelerated gradient/momentum), "Adam", and "Nadam" (Nesterov-Adam).
+#' @param optimizer A string (default: "GD" gradient descent). Other options are "Nesterov" (accelerated gradient/momentum), "Adam", and "Nadam" (Nesterov-Adam).
 #' @param maxiter  (default: 5000) Maximum number of iterations of the empirical Bayes optimization
 #' @param tol (default: 1e-4) Stopping tolerance for the empirical Bayes optimization
 #' @param learning_rate (default: 0.001) Learning rate for the empirical Bayes optimization
@@ -258,7 +261,7 @@ ace.train <- function(y, X, Z,
 #' df$y <- rnorm(n2, mean = y2_true, sd = 2)
 #' my.GPS <- ace(y ~ x + x2 | z,
 #'               data = df,
-#'               myoptim = "GD",
+#'               optimizer = "GD",
 #'               learning_rate = 0.0001,
 #'               basis = "ns",
 #'               n.knots = 2)
@@ -273,15 +276,17 @@ ace.train <- function(y, X, Z,
 
 ace <- function(formula, data,
                      kernel = "SE",
-                     basis = "ns",
+                     basis = "linear",
                      n.knots = 1,
-                     myoptim = "GD",
+                     optimizer = "Nadam",
                      maxiter = 1000,
                      tol = 1e-4,
                      learning_rate = 0.001,
                      beta1 = 0.9,
                      beta2 = 0.999,
-                     momentum = 0.0) {
+                     momentum = 0.0,
+                     norm.clip     = TRUE,
+                     clip.at       = 1) {
   myformula <- Formula::Formula(formula)
   data <- stats::model.frame(myformula, data)
 
@@ -293,7 +298,7 @@ ace <- function(formula, data,
                              kernel = kernel,
                              basis = basis,
                              n.knots = n.knots,
-                             myoptim = myoptim,
+                             optimizer = optimizer,
                              maxiter = maxiter,
                              tol = tol,
                              learning_rate = learning_rate,

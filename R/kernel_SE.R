@@ -13,7 +13,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      n <- length(y)
                                      parameters <<- matrix(c(0,0, # sigma, mu
                                                             -log(c(1, diag(t(Z) %*% Z) / n)), # use inner product to scale
-                                                            rep(c(-0.1, rep(-0.1, B - 1)), p) # ARD parameters
+                                                            rep(c(-1, rep(-1, B - 1)), p)/p # ARD parameters
                                                             )
                                                           )
                                    },
@@ -25,12 +25,12 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    kernel_mat_sym = function(X, Z) {
                                      #intended use for the gradient step
                                      Klist <- kernmat_SE_symmetric_cpp(X, Z, parameters)
-                                     #Klist <- kernmat_SE_cpp(X,X,Z,Z,parameters)
+                                     #kernmat_SE_cpp(X,X,Z,Z,parameters)
                                      Kmat <<- Klist$full
                                      Karray <<- Klist$elements
                                      Klist
                                    },
-                                   getinv_kernel = function(X, Z, noeigen=FALSE) {
+                                   getinv_kernel = function(X, Z) {
                                      # get matrices and return inverse for prediction
                                      kernel_mat_sym(X, Z)
                                      invKmatList <- invkernel_cpp(Kmat, c(parameters[1])) #no error handling
@@ -39,7 +39,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                    },
                                    para_update = function(iter, y, X, Z, Optim, printevery=100) {
                                      #update Kmat and invKmat in the class environment
-                                     stats <- c(0,0)
+                                     stats <- c(0, 0)
                                      invKmatList <- getinv_kernel(X, Z);
 
                                      gradients <- grad_SE_cpp(y, X, Z,

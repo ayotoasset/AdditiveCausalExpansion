@@ -1,6 +1,6 @@
 #' Plot marginal effect.
 #'
-#' @param object An "GPspline" object from the GPspline function
+#' @param object An "ace" object from the ace function
 #' @param Xcol Either numeric or character, the latter only works if the training was done with a data.frame (i.e. not GPspline.train). If missing plots the 2D graph of Y on Z.
 #' @param marginal A logical statement, default: \code{FALSE}. If \code{TRUE}, plots the marginal surface of the response surface Y with respect to the basis expanded model Z using average X.
 #' @param plot3D A logical statemnt whether a three-dimensional plot should be produced. This is only valid if an X-column is selected and the plotly package is installed.
@@ -284,11 +284,12 @@ plot.ace <- function(object, Xcol, marginal = FALSE, plot3D = FALSE, show.observ
       obsZ          <- object$train_data$Z
       Xgrid2        <- t(matrix(rep(medX,nx),px,nx))
       Xgrid2[,Xcol] <- Xgrid
+      n <- nrow(Xgrid2)
 
       if(marginal){
         #one curve ("treatment effect")
-        cat("Predicting", n, "grid points\n")
-        surface <- predict(object,matrix(Xgrid2),0,marginal=TRUE) #Z does not matter
+        cat("Marginal: Predicting", n, "grid points\n")
+        surface <- predict.ace(object, as.matrix(Xgrid2), 0, marginal = TRUE) #Z does not matter
 
         y_limit <- c(min(surface$ci[,1]),max(surface$ci[,2]))
 

@@ -7,7 +7,7 @@
 marginal(object, newX, newZ, causal = FALSE)
 }
 \arguments{
-\item{object}{An "GPspline" object from the GPspline function}
+\item{object}{An "ace" object from the GPspline function}
 
 \item{newX}{A matrix with new data. If not presented, using the training data.}
 
