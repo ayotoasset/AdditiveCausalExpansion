@@ -44,7 +44,7 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
     normalize_test(newX.intern, newZ.intern, object$moments)
   }
 
-  if (any(abs(newX.intern) >= 1)){
+  if (any(abs(newX.intern) > 1)){
     cat("Some values of X outside the unit-circle of the training data.\n")
     #apply(abs(newX.intern), 2, max)
   }
