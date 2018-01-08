@@ -1,7 +1,7 @@
 Package: ace
 Type: Package
 Title: Additive Causal Expansion model
-Version: 0.3.0
+Version: 0.3.1
 Date: 2017-12-27
 Author@R: person(Philip,Pilgerstorfer,email = "philip at pilgerstorfer.org", role = c("aut", "cre"))
 Author: Philip Pilgerstorfer [aut, cre]
