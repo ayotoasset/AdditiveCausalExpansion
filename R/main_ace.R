@@ -42,7 +42,7 @@
 #' Y1 <- rnorm(n, mean = y1_true, sd = 1)
 #' Y <- Y0 * (1-Z) + Y1 * Z
 #' # train model:
-#' my.GPS <- ace.train(Y, X, Z, optimizer = "GD", learning_rate = 0.0001)
+#' my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "Nadam", learning_rate = 0.002, maxiter=2000)
 #' # print (sample) average treatment effect (ATE)
 #' predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
 #' #true ATE
@@ -69,6 +69,7 @@
 #'                     optimizer = "Nadam",
 #'                     learning_rate = 0.01,
 #'                     basis = "ncs")
+#' plot(my.GPS, 1, plot3D = TRUE, truefun = y_truefun, show.observations = TRUE)
 #' plot(my.GPS, 1, truefun = y_truefun)
 #' my.pred <- predict(my.GPS)
 #' # plot quality of prediction:
@@ -193,7 +194,7 @@ ace.train <- function(y, X, Z,
     if(optimizer == "GD") {
       momentum = 0.0
     }
-    myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum,norm.clip =  norm.clip, clip.at = clip.at)
+    myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum, norm.clip =  norm.clip, clip.at = clip.at)
   }
   # initialize optimization help variables (mu, nu, etc.)
   myOptimizer$initOpt(myKernel)
@@ -211,7 +212,7 @@ ace.train <- function(y, X, Z,
       break
       }
   }
-  convergence.flag = (iter == maxiter)
+  convergence.flag = (iter < maxiter)
   if(!convergence.flag) {
     cat("Optimization stopped: maximum iterations reached\n")
   }
@@ -230,8 +231,8 @@ ace.train <- function(y, X, Z,
                                                                             beta2 = beta2,
                                                                             iter = iter),
                  moments = moments,
-                 train_data = list(y = y, X = X.intern, Z = Z.intern, Zbinary = isbinary)),
-                 convergence = convergence.flag,
+                 train_data = list(y = y, X = X.intern, Z = Z.intern, Zbinary = isbinary),
+                 convergence = convergence.flag),
                  class = "ace")
 }
 
