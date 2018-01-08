@@ -1,6 +1,5 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
-#include <cmath>
 
 using namespace arma;
 using namespace Rcpp;
@@ -26,7 +25,7 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,
   //create the Euclidian distance metric:
   for(unsigned int i = 0; i < p; i++){ // for every element of x
     for(unsigned int r = 0; r < n1; r++){ //for every output row
-      tmprow = arma::pow(X1(r, i) - conv_to<rowvec>::from(X2.col(i)), 2);
+      tmprow = arma::pow(X1(r, i) - conv_to<arma::rowvec>::from(X2.col(i)), 2);
 
       for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
         tmpX.slice(b).row(r) += tmprow * exp( - parameters[1+b+B*(i+1)]); //L(i,b)
@@ -138,30 +137,6 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X,
                             _("elements") = Ks);
 }
 
-
-// [[Rcpp::export]]
-Rcpp::List invkernel_no_eigen_cpp(arma::mat pdmat,
-                                  const double sigma){
-  unsigned int n = pdmat.n_cols;
-  arma::vec eigval(n); eigval.ones();
-  arma::mat eigvec(n,n); eigvec.eye();
-  pdmat.diag() += exp(sigma);
-
-  //arma::mat invKmat(n,n);
-  if(inv_sympd( pdmat, pdmat )){
-    Rcout << "Inverse of Kernel not completed." << std::endl;
-  }
-  return Rcpp::List::create(_("eigenval") = 0,
-                            _("inv") = pdmat);
-}
-
-// [[Rcpp::export]]
-arma::mat invkernel_cpp_legacy(arma::mat pdmat,
-                               const double& sigma){
-  pdmat.diag() += exp(sigma);
-  return arma::inv_sympd(pdmat);
-}
-
 // [[Rcpp::export]]
 Rcpp::List invkernel_cpp(arma::mat pdmat,
                          const double& sigma){
@@ -182,7 +157,6 @@ Rcpp::List invkernel_cpp(arma::mat pdmat,
     invKmat.col(i) = invKmat.col(i) / eigval[i];
   }
   invKmat = invKmat * eigvec.t();
-  //invKmat = arma::inv_sympd(pdmat);
 
   return Rcpp::List::create(_("eigenval") =  eigval,
                             _("inv") = invKmat); //out["eigenvec"] = eigvec;
