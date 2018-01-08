@@ -70,7 +70,7 @@ Y0 <- rnorm(n, mean = y0_true, sd = 1)
 Y1 <- rnorm(n, mean = y1_true, sd = 1)
 Y <- Y0 * (1-Z) + Y1 * Z
 # train model:
-my.GPS <- ace.train(Y, X, Z, optimizer = "GD", learning_rate = 0.0001)
+my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "Nadam", learning_rate = 0.002, maxiter=2000)
 # print (sample) average treatment effect (ATE)
 predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
 #true ATE
@@ -97,7 +97,6 @@ my.GPS <- ace.train(Y2, X2, Z2,
                     optimizer = "Nadam",
                     learning_rate = 0.01,
                     basis = "ncs")
-plot(my.GPS, 1, truefun = y_truefun)
 my.pred <- predict(my.GPS)
 # plot quality of prediction:
 plot(Y2, my.pred$map)

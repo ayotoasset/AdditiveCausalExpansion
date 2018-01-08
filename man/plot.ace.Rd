@@ -6,7 +6,7 @@
 \usage{
 \method{plot}{ace}(object, Xcol, marginal = FALSE, plot3D = FALSE,
   show.observations = TRUE, Xlim = c(-1, 1), Xstep = 0.1, Zlim = c(-1,
-  1), Zstep = 0.1, truefun)
+  1), Zstep = 0.1, truefun, ...)
 }
 \arguments{
 \item{object}{An "ace" object from the ace function}
