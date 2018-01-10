@@ -69,8 +69,6 @@
 #'                     optimizer = "Nadam",
 #'                     learning_rate = 0.01,
 #'                     basis = "ncs")
-#' plot(my.GPS, 1, plot3D = TRUE, truefun = y_truefun, show.observations = TRUE)
-#' plot(my.GPS, 1, truefun = y_truefun)
 #' my.pred <- predict(my.GPS)
 #' # plot quality of prediction:
 #' plot(Y2, my.pred$map)
