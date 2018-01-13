@@ -1,5 +1,6 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
+#include "ace_kernelutilities.h"
 
 using namespace arma;
 using namespace Rcpp;
@@ -57,21 +58,6 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,
   return Rcpp::List::create(_("full") =  Kfull,
                             _("elements") = tmpX);
 }
-
-//more efficient with pointers and a class but well
-arma::mat uppertri2symmat(arma::vec matvec,
-                          unsigned int dim){
-  arma::mat out(dim,dim);
-  unsigned int cnt = 0;
-  for(unsigned int r = 0; r < dim; r++ ){
-    for(unsigned int c = r; c < dim; c++ ){
-      out(r,c) = out(c,r) = matvec(cnt);
-      cnt++;
-    }
-  }
-  return out;
-}
-
 
 // [[Rcpp::export]]
 Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X,

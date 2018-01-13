@@ -1,5 +1,6 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
+#include "ace_kernelutilities.h"
 
 using namespace arma;
 using namespace Rcpp;
@@ -132,19 +133,6 @@ Rcpp::List kernmat_Matern12_cpp(const arma::mat& X1,const arma::mat& X2,const ar
                             _("elements") = tmpX);
 }
 
-//more efficient with pointers and a class but well
-arma::mat uppertri2symmat_Matern(arma::vec matvec,unsigned int dim){
-  arma::mat out(dim,dim);
-  unsigned int cnt = 0;
-  for(unsigned int r = 0; r < dim; r++ ){
-    for(unsigned int c = r; c < dim; c++ ){
-      out(r,c) = out(c,r) = matvec(cnt);
-      cnt++;
-    }
-  }
-  return out;
-}
-
 
 // [[Rcpp::export]]
 Rcpp::List kernmat_Matern52_symmetric_cpp(const arma::mat& X, const arma::mat& Z, const arma::vec& parameters) {
@@ -173,7 +161,7 @@ Rcpp::List kernmat_Matern52_symmetric_cpp(const arma::mat& X, const arma::mat& Z
   }
 
   tmpX.col(0) = (1 + sqrt(5*tmpX.col(0)) + 5*tmpX.col(0)/3 ) % exp(parameters[2] - sqrt(5*tmpX.col(0))); //lambda[b]
-  Ks.slice(0) = uppertri2symmat_Matern( tmpX.col(0), n);
+  Ks.slice(0) = uppertri2symmat( tmpX.col(0), n);
   for(unsigned int b = 1; b < B; b++){
     cnt=0;
     for(unsigned int r = 0; r < n; r++){
@@ -186,10 +174,10 @@ Rcpp::List kernmat_Matern52_symmetric_cpp(const arma::mat& X, const arma::mat& Z
     }
     }
     // being done with the elements in tmpX we use it to construct the kernel matrices in an efficient way
-    Ks.slice(b) = uppertri2symmat_Matern( tmpX.col(b), n );
+    Ks.slice(b) = uppertri2symmat(tmpX.col(b), n);
     for(unsigned int j = 0; j < n*(n+1)/2; j++){ tmpX(j,0) += tmpX(j,b); }
   }
-  Kfull = uppertri2symmat_Matern(tmpX.col(0), n); //sum sparse vectorization instead of matrices
+  Kfull = uppertri2symmat(tmpX.col(0), n); //sum sparse vectorization instead of matrices
 
   //Rcpp::Rcout << "Kele(0,0,1)" << Ks.slice(1)(0,0) << std::endl;
   return Rcpp::List::create(_("full") =  Kfull,
@@ -224,7 +212,7 @@ Rcpp::List kernmat_Matern32_symmetric_cpp(const arma::mat& X, const arma::mat& Z
   tmpX = arma::sqrt(tmpX);
 
   tmpX.col(0) = (1 + sqrt(3)*tmpX.col(0) ) % exp(parameters[2] - sqrt(3)*tmpX.col(0) ); //lambda[b]
-  Ks.slice(0) = uppertri2symmat_Matern( tmpX.col(0), n);
+  Ks.slice(0) = uppertri2symmat(tmpX.col(0), n);
   for(unsigned int b = 1; b < B; b++){
     cnt=0;
     for(unsigned int r = 0; r < n; r++){
@@ -237,10 +225,10 @@ Rcpp::List kernmat_Matern32_symmetric_cpp(const arma::mat& X, const arma::mat& Z
       }
     }
     // being done with the elements in tmpX we use it to construct the kernel matrices in an efficient way
-    Ks.slice(b) = uppertri2symmat_Matern( tmpX.col(b), n );
+    Ks.slice(b) = uppertri2symmat( tmpX.col(b), n );
     for(unsigned int j = 0; j < n*(n+1)/2; j++){ tmpX(j,0) += tmpX(j,b); }
   }
-  Kfull = uppertri2symmat_Matern(tmpX.col(0), n); //sum sparse vectorization instead of matrices
+  Kfull = uppertri2symmat(tmpX.col(0), n); //sum sparse vectorization instead of matrices
 
   //Rcpp::Rcout << "Kele(0,0,1)" << Ks.slice(1)(0,0) << std::endl;
   return Rcpp::List::create(_("full") =  Kfull,
@@ -275,7 +263,7 @@ Rcpp::List kernmat_Matern12_symmetric_cpp(const arma::mat& X, const arma::mat& Z
   tmpX = arma::sqrt(tmpX);
 
   tmpX.col(0) = exp(parameters[2] - tmpX.col(0) ); //lambda[b]
-  Ks.slice(0) = uppertri2symmat_Matern( tmpX.col(0), n);
+  Ks.slice(0) = uppertri2symmat( tmpX.col(0), n);
   for(unsigned int b = 1; b < B; b++){
     cnt=0;
     for(unsigned int r = 0; r < n; r++){
@@ -288,10 +276,10 @@ Rcpp::List kernmat_Matern12_symmetric_cpp(const arma::mat& X, const arma::mat& Z
       }
     }
     // being done with the elements in tmpX we use it to construct the kernel matrices in an efficient way
-    Ks.slice(b) = uppertri2symmat_Matern( tmpX.col(b), n );
+    Ks.slice(b) = uppertri2symmat( tmpX.col(b), n );
     for(unsigned int j = 0; j < n*(n+1)/2; j++){ tmpX(j,0) += tmpX(j,b); }
   }
-  Kfull = uppertri2symmat_Matern(tmpX.col(0), n); //sum sparse vectorization instead of matrices
+  Kfull = uppertri2symmat(tmpX.col(0), n); //sum sparse vectorization instead of matrices
 
   //Rcpp::Rcout << "Kele(0,0,1)" << Ks.slice(1)(0,0) << std::endl;
   return Rcpp::List::create(_("full") =  Kfull,
