@@ -1,1 +1,1 @@
-PKG_CXXFLAGS = -I"../src/include/"
+PKG_CXXFLAGS = -I"../src/include/" -I"../src/"
