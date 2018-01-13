@@ -1,6 +1,5 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
-#include <cmath>
 
 using namespace arma;
 using namespace Rcpp;
