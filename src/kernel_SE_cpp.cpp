@@ -187,7 +187,7 @@ arma::mat evid_scale_gradients(const arma::mat& X,
     }
     for(unsigned int b=0; b < B; b++){
       // replace parameter with its gradient
-      L[b + B*i] = evid_grad(Kaa, K.slice(b) % tmpX * exp( - L[b + B * i]))
+      L[b + B*i] = evid_grad(Kaa, K.slice(b) % tmpX * exp( - L[b + B * i]));
                    // - length_scale_hyperparameter * sqrt(exp(L[b + B * i]));
                    // - 2 * exp(L[b + B * i]) * length_scale_hyperparameter
                    // / (1 + L[b + B*i] * length_scale_hyperparameter);
