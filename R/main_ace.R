@@ -42,7 +42,7 @@
 #' Y1 <- rnorm(n, mean = y1_true, sd = 1)
 #' Y <- Y0 * (1-Z) + Y1 * Z
 #' # train model:
-#' my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "Nadam", learning_rate = 0.002, maxiter=2000)
+#' my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
 #' # print (sample) average treatment effect (ATE)
 #' predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
 #' #true ATE
@@ -59,22 +59,22 @@
 #' X2 <- matrix(runif(n2, min = 1, max = 2))
 #' X3 <- matrix(runif(n2, min = 1, max = 2))
 #' X <- data.frame(X2, X3)
-#' Z2 <- rnorm(n2, exp(X2) - 10, 1)
-#' y_truefun <- function(x, z) {as.matrix(10 * x + (x - 1.5) * ((z + 9)^2 - 2 * z))}
-#' marg_truefun <- function(x, z) {as.matrix( (x - 1.5) * (2 * (z + 9) - 2))}
+#' Z2 <- rnorm(n2, exp(X2 + X3) - 10, 1)
+#' y_truefun <- function(x, z) {as.matrix(10 * x[,1] + (x[,1] - 1.5) * ((z + 9)^2 - 2 * z))}
+#' marg_truefun <- function(x, z) {as.matrix( (x[,1] - 1.5) * (2 * (z + 9) - 2))}
 #' y2_true <- y_truefun(X2, Z2)
 #' Y2 <- rnorm(n2, mean = y2_true, sd = 2)
 #' marg_true <- marg_truefun(X2, Z2)
-#' my.GPS <- ace.train(Y2, X2, Z2,
+#' my.GPS <- ace.train(Y2, X, Z2,
 #'                     optimizer = "Nadam",
-#'                     learning_rate = 0.01,
+#'                     learning_rate = 0.009,
 #'                     basis = "ncs")
 #' my.pred <- predict(my.GPS)
 #' # plot quality of prediction:
 #' plot(Y2, my.pred$map)
 #' abline(0, 1, lty = 2, col = "blue", lwd = 2)
 #' # comparison with the true curve:
-#' plot(my.GPS, 1, truefun = y_truefun)
+#' plot(my.GPS, 1, truefun = y_truefun, plot3D = TRUE)
 #' # plotting of the marginal curve:
 #' plot(my.GPS, 1, marginal=TRUE)
 #' # plot of the 2D curve with only Z

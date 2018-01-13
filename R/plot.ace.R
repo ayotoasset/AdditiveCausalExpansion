@@ -145,7 +145,7 @@ plot.ace <- function(object, Xcol, marginal = FALSE, plot3D = FALSE, show.observ
 
         #Xgrid2_notnormalized = Xgrid2
         #only single dimensional X right now:
-        true <- truefun(grid$X, # * object$moments[1+Xcol,2] + object$moments[1+Xcol,1],
+        true <- truefun(Xgrid2, # * object$moments[1+Xcol,2] + object$moments[1+Xcol,1],
                         grid$Z) # * object$moments[1+px+pz,2] + object$moments[1+px+pz,1])
         gridT   <- grid
         gridT$Y <- true
@@ -281,7 +281,7 @@ plot.ace <- function(object, Xcol, marginal = FALSE, plot3D = FALSE, show.observ
       graphics::plot(obsZ, obsY, xlim = range(Zgrid), cex = 0.5, ylab = y.label, xlab = "Basis expanded Z", ylim = y_limit, ...)
       graphics::grid()
       if(!missing(truefun)) {
-        graphics::lines(Zgrid, truefun(Xgrid, Zgrid), lty = 2, lwd = 1.5)
+        graphics::lines(Zgrid, truefun(Xgrid2, Zgrid), lty = 2, lwd = 1.5)
       }
       graphics::lines(Zgrid, Ygrid, lty = 2, lwd = 2, col = Vermillion100)
       graphics::polygon(c(Zgrid, rev(Zgrid)), c(YgridL, rev(YgridU)), col = Vermillion50, border = FALSE)
