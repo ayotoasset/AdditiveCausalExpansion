@@ -174,7 +174,8 @@ arma::mat evid_scale_gradients(const arma::mat& X,
                                const arma::mat& Kaa,
                                const arma::cube& K,
                                arma::vec L,
-                               unsigned int B){
+                               unsigned int B){//,
+                               //double length_scale_hyperparameter = 0){
   // produce a (p x B) matrix "grad" with the gradients of L
   unsigned int n = X.n_rows;
   unsigned int p = X.n_cols;
@@ -186,7 +187,10 @@ arma::mat evid_scale_gradients(const arma::mat& X,
     }
     for(unsigned int b=0; b < B; b++){
       // replace parameter with its gradient
-      L[b + B*i] = evid_grad(Kaa, K.slice(b) % tmpX * exp( - L[b + B*i]) );
+      L[b + B*i] = evid_grad(Kaa, K.slice(b) % tmpX * exp( - L[b + B * i]))
+                   // - length_scale_hyperparameter * sqrt(exp(L[b + B * i]));
+                   // - 2 * exp(L[b + B * i]) * length_scale_hyperparameter
+                   // / (1 + L[b + B*i] * length_scale_hyperparameter);
         //- 0.5 * arma::trace( Kaa * (K.slice(b) % tmpX)) * exp( - L[b + B*i] );
     }
   }
