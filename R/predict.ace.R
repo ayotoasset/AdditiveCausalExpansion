@@ -12,22 +12,36 @@
 predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
   isbinary <- object$train_data$Zbinary
   #this function returns the prediction for the fitted Gaussian process
+
   if (missing(newX) && missing(newZ)){
     cat("No newX given, using training X.\n")
     newX.intern <- object$train_data$X #normalized
     cat("No newZ given, using training Z.\n")
     newZ.intern <- object$train_data$Z #normalized
 
-  } else if (!missing(newX) && missing(newZ)){
+  } else if (missing(newX) && !missing(newZ)){
+    newX.intern <- as.matrix(data.table::copy(object$train_data$X)) #normalized
+
+    if (length(newZ) == 1) {
+      newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
+    } else {
+      newZ.intern <- as.matrix(data.table::copy(newZ))
+
+      #normalize the non-binary variables
+      normalize_test(newX.intern, newZ.intern, object$moments)
+      newX.intern <- object$train_data$X
+    }
+  } else if (!missing(newX) && missing(newZ)) {
     newX.intern <- as.matrix(data.table::copy(newX))
     if (!marginal) {
       cat("No newZ given, using 0.\n")
     }
     newZ.intern <- matrix(rep(0, nrow(newX.intern)), nrow(newX.intern), 1)
+
     #normalize the non-binary variables
     normalize_test(newX.intern, newZ.intern, object$moments)
 
-  } else if (!missing(newX) && !missing(newZ)) {
+  }  else if (!missing(newX) && !missing(newZ)) {
     newX.intern <- as.matrix(data.table::copy(newX))
     newZ.intern <- as.matrix(data.table::copy(newZ))
 
@@ -59,11 +73,13 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
                                        object$moments[1, 1],
                                        object$moments[1, 2])
   } else {
+    test.basis = object$Basis$testbasis(newZ.intern)
     pred_list <- object$Kernel$predict_marginal(y = object$train_data$y,
                                                 X = object$train_data$X,
                                                 Z = object$Basis$B,
                                                 X2 = newX.intern,
-                                                dZ2 = object$Basis$testbasis(newZ.intern)$dB,
+                                                Z2 = test.basis$B,
+                                                dZ2 = test.basis$dB,
                                                 mean_y = object$moments[1, 1],
                                                 std_y = object$moments[1, 2],
                                                 std_Z = object$moments[dim(object$moments)[1], 2],

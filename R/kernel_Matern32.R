@@ -80,7 +80,7 @@ KernelClass_Matern32 <- setRefClass("Matern32",
                                         outlist <- pred_cpp(y, parameters[1], parameters[2],
                                                             invKmatn, K_xX, K_xx, mean_y, std_y)
                                       },
-                                      predict_marginal = function(y, X, Z, X2, dZ2,
+                                      predict_marginal = function(y, X, Z, X2, Z2, dZ2,
                                                                   mean_y, std_y, std_Z,
                                                                   calculate_ate){
 
@@ -90,7 +90,7 @@ KernelClass_Matern32 <- setRefClass("Matern32",
                                         Kmarginal_xX <- kernmat_Matern32_cpp(X2, X, dZ2, Z, parameters)$elements
                                         Kmarginal_xx <- kernmat_Matern32_symmetric_cpp(X2, dZ2, parameters)$elements
 
-                                        outlist <- pred_marginal_cpp(y, parameters[1], parameters[2],
+                                        outlist <- pred_marginal_cpp(y, Z2, parameters[1], parameters[2],
                                                                      invKmatn,
                                                                      Kmarginal_xX, Kmarginal_xx,
                                                                      mean_y, std_y, std_Z, calculate_ate)

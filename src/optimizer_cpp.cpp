@@ -57,7 +57,7 @@ bool Adam_cpp(double iter,
   //use references to update
   m = (beta1 * m) + (1-beta1) * grad;
   v = beta2 * v + (1-beta2) * arma::pow(grad,2);
-  para = para + learn_rate * ( m  / (1-pow(beta1,iter)) ) / ( sqrt(v / (1-pow(beta2,iter)) ) + eps);
+  para = para + learn_rate * (m  / (1-pow(beta1,iter)) ) / ( sqrt(v / (1-pow(beta2,iter)) ) + eps);
 
   return output_flag;
 }

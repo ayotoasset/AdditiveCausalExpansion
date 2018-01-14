@@ -81,7 +81,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      outlist <- pred_cpp(y, parameters[1], parameters[2],
                                                          invKmatn, K_xX, K_xx, mean_y, std_y)
                                    },
-                                   predict_marginal = function(y, X, Z, X2, dZ2,
+                                   predict_marginal = function(y, X, Z, X2, Z2, dZ2,
                                                                mean_y, std_y, std_Z,
                                                                calculate_ate) {
                                      n <- length(y)
@@ -90,7 +90,7 @@ KernelClass_SE <- setRefClass("SqExpKernel",
                                      Kmarginal_xX <- kernmat_SE_cpp(X2, X, dZ2, Z, parameters)$elements
                                      Kmarginal_xx <- kernmat_SE_symmetric_cpp(X2, dZ2, parameters)$elements
 
-                                     outlist <- pred_marginal_cpp(y, parameters[1], parameters[2],
+                                     outlist <- pred_marginal_cpp(y, Z2, parameters[1], parameters[2],
                                                                   invKmatn,
                                                                   Kmarginal_xX, Kmarginal_xx,
                                                                   mean_y, std_y, std_Z, calculate_ate)

@@ -72,7 +72,8 @@ Y <- Y0 * (1-Z) + Y1 * Z
 # train model:
 my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
 # print (sample) average treatment effect (ATE)
-predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
+predict(my.GPS, marginal = TRUE, causal = TRUE)$ate$map
+predict(my.GPS, marginal = TRUE, causal = TRUE)$att$map
 #true ATE
 mean(y1_true - y0_true)
 # plot response curves
@@ -87,7 +88,7 @@ n2 <- 200
 X2 <- matrix(runif(n2, min = 1, max = 2))
 X3 <- matrix(runif(n2, min = 1, max = 2))
 X <- data.frame(X2, X3)
-Z2 <- rnorm(n2, exp(X2 + X3) - 10, 1)
+Z2 <- rnorm(n2, exp(X2) - 10, 1)
 y_truefun <- function(x, z) {as.matrix(10 * x[,1] + (x[,1] - 1.5) * ((z + 9)^2 - 2 * z))}
 marg_truefun <- function(x, z) {as.matrix( (x[,1] - 1.5) * (2 * (z + 9) - 2))}
 y2_true <- y_truefun(X2, Z2)
@@ -95,7 +96,7 @@ Y2 <- rnorm(n2, mean = y2_true, sd = 2)
 marg_true <- marg_truefun(X2, Z2)
 my.GPS <- ace.train(Y2, X, Z2,
                     optimizer = "Nadam",
-                    learning_rate = 0.009,
+                    learning_rate = 0.005,
                     basis = "ncs")
 my.pred <- predict(my.GPS)
 # plot quality of prediction:

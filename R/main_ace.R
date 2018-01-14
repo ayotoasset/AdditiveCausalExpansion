@@ -20,17 +20,19 @@
 #' # Generate data
 #' library(ace)
 #' set.seed(1231)
-#' n <- 120
+#' n <- 300
 #' Z <- rbinom(n, 1, 0.3)
 #' X1 <- rnorm(sum(Z), mean = 30,sd = 10)
 #' X0 <- rnorm(n-sum(Z), mean = 20, sd = 10)
+#' X2 <- runif(n)
 #' X <- matrix(NaN, n, 1)
 #' X[Z==1, ] <- X1
 #' X[Z==0, ] <- X0
-#' sort.idx <- sort(X, index.return = TRUE)$ix
+#' X <- data.frame(X, X2)
+#' sort.idx <- sort(X[,1], index.return = TRUE)$ix
 #' y_truefun <- function(x,z) {
-#'     mat0 <- matrix(72 + 3 * (x[z == 0,] > 0) * sqrt(abs(x[z == 0, ])), sum(z == 0), 1)
-#'     mat1 <- matrix(90 + exp(0.06 * x[z == 1, ]), sum(z == 1), 1)
+#'     mat0 <- matrix(72 + 3 * (x[z == 0,1] > 0) * sqrt(abs(x[z == 0,1])), sum(z == 0), 1)
+#'     mat1 <- matrix(90 + exp(0.06 * x[z == 1,2]), sum(z == 1), 1)
 #'     mat <- matrix(NaN, length(z), 1)
 #'     mat[z==0, 1] <- mat0
 #'     mat[z==1, 1] <- mat1
@@ -44,7 +46,9 @@
 #' # train model:
 #' my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
 #' # print (sample) average treatment effect (ATE)
-#' predict(my.GPS, marginal = TRUE, causal = TRUE)$ate_map
+#' predict(my.GPS, marginal = TRUE, causal = TRUE)$ate
+#' predict(my.GPS, marginal = TRUE, causal = TRUE)$att
+#' robust_treatment(my.GPS)
 #' #true ATE
 #' mean(y1_true - y0_true)
 #' # plot response curves
@@ -59,7 +63,7 @@
 #' X2 <- matrix(runif(n2, min = 1, max = 2))
 #' X3 <- matrix(runif(n2, min = 1, max = 2))
 #' X <- data.frame(X2, X3)
-#' Z2 <- rnorm(n2, exp(X2 + X3) - 10, 1)
+#' Z2 <- rnorm(n2, exp(X2) - 10, 1)
 #' y_truefun <- function(x, z) {as.matrix(10 * x[,1] + (x[,1] - 1.5) * ((z + 9)^2 - 2 * z))}
 #' marg_truefun <- function(x, z) {as.matrix( (x[,1] - 1.5) * (2 * (z + 9) - 2))}
 #' y2_true <- y_truefun(X2, Z2)
@@ -67,7 +71,7 @@
 #' marg_true <- marg_truefun(X2, Z2)
 #' my.GPS <- ace.train(Y2, X, Z2,
 #'                     optimizer = "Nadam",
-#'                     learning_rate = 0.009,
+#'                     learning_rate = 0.005,
 #'                     basis = "ncs")
 #' my.pred <- predict(my.GPS)
 #' # plot quality of prediction:
