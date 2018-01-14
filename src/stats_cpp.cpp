@@ -1,6 +1,6 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
-#include <cmath>
+#include "ace_kernelutilities.hpp"
 
 using namespace arma;
 using namespace Rcpp;
@@ -20,7 +20,7 @@ arma::rowvec stats_cpp(arma::colvec y, arma::mat& Kmat, arma::mat& invKmatn, arm
   //RMSE
   stats(0) = pow(arma::norm(y - (Kmat * alpha)),2);
   //Evidence
-  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + sum(log(eigenval)) + arma::dot( y, alpha ) ) ;
+  stats(1) = logevidence(y, alpha, eigenval, n);
 
   return stats;
 }

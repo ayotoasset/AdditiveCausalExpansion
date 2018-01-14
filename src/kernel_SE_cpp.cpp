@@ -1,6 +1,6 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
-#include "ace_kernelutilities.h"
+#include "ace_kernelutilities.hpp"
 
 using namespace arma;
 using namespace Rcpp;
@@ -136,7 +136,7 @@ Rcpp::List invkernel_cpp(arma::mat pdmat,
   }
 
   //get inverse and eigenvalues
-  arma::mat invKmat(n,n);
+  arma::mat invKmat(n, n);
 
   invKmat = eigvec;
   for(unsigned int i = 0; i < n; i++){
@@ -145,18 +145,12 @@ Rcpp::List invkernel_cpp(arma::mat pdmat,
   invKmat = invKmat * eigvec.t();
 
   return Rcpp::List::create(_("eigenval") =  eigval,
-                            _("inv") = invKmat); //out["eigenvec"] = eigvec;
+                            _("inv") = invKmat);
 }
 
 ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// gradients
 
-double evid_grad(const arma::mat& Kaa,
-                 const arma::mat& dK) {
-  return - 0.5 * arma::trace(Kaa * dK);
-}
-
-
-arma::mat evid_scale_gradients(const arma::mat& X,
+inline arma::mat evid_scale_gradients(const arma::mat& X,
                                const arma::mat& Kaa,
                                const arma::cube& K,
                                arma::vec L,
@@ -213,7 +207,7 @@ arma::vec grad_SE_cpp(const arma::vec& y,
   tmpK = invKmatn - alpha * alpha.t();
 
   // sigma
-  gradients[0] = - 0.5 * arma::trace(tmpK) * exp(parameters[0]);
+  gradients[0] = sigma_gradient(tmpK, parameters[0]);
 
   // kernel-scale "lambda"
   for(unsigned int b=0; b<B; b++){
@@ -231,7 +225,7 @@ arma::vec grad_SE_cpp(const arma::vec& y,
   //RMSE
   stats(0) = pow(arma::norm(ybar - (Kfull * alpha)), 2);
   //Evidence
-  stats(1) = - 0.5 * (n * log(2.0 * arma::datum::pi) + sum(log(eigenval)) + arma::dot(ybar, alpha) ) ;
+  stats(1) = logevidence(y, alpha, eigenval, n);
 
   return gradients;
 }

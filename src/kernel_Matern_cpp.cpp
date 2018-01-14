@@ -1,11 +1,11 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
-#include "ace_kernelutilities.h"
+#include "ace_kernelutilities.hpp"
 
 using namespace arma;
 using namespace Rcpp;
 
-// [[Rcpp::export]]
+/* // [[Rcpp::export]]
 Rcpp::List kernmat_Matern52_cpp(const arma::mat& X1,const arma::mat& X2,const arma::mat& Z1,const arma::mat& Z2,
                           const arma::vec& parameters) {
   //input X1,X2,Z1,Z2,parameters
@@ -46,6 +46,7 @@ Rcpp::List kernmat_Matern52_cpp(const arma::mat& X1,const arma::mat& X2,const ar
   return Rcpp::List::create(_("full") =  Kfull,
                             _("elements") = tmpX);
 }
+*/
 
 // [[Rcpp::export]]
 Rcpp::List kernmat_Matern32_cpp(const arma::mat& X1,const arma::mat& X2,const arma::mat& Z1,const arma::mat& Z2,
@@ -89,7 +90,7 @@ Rcpp::List kernmat_Matern32_cpp(const arma::mat& X1,const arma::mat& X2,const ar
   return Rcpp::List::create(_("full") =  Kfull,
                             _("elements") = tmpX);
 }
-
+/*
 // [[Rcpp::export]]
 Rcpp::List kernmat_Matern12_cpp(const arma::mat& X1,const arma::mat& X2,const arma::mat& Z1,const arma::mat& Z2,
                                 const arma::vec& parameters) {
@@ -183,7 +184,7 @@ Rcpp::List kernmat_Matern52_symmetric_cpp(const arma::mat& X, const arma::mat& Z
   return Rcpp::List::create(_("full") =  Kfull,
                             _("elements") = Ks);
 }
-
+*/
 // [[Rcpp::export]]
 Rcpp::List kernmat_Matern32_symmetric_cpp(const arma::mat& X, const arma::mat& Z, const arma::vec& parameters) {
   //input X1,X2,Z1,Z2,parameters
@@ -235,7 +236,7 @@ Rcpp::List kernmat_Matern32_symmetric_cpp(const arma::mat& X, const arma::mat& Z
                             _("elements") = Ks);
 }
 
-// [[Rcpp::export]]
+/* // [[Rcpp::export]]
 Rcpp::List kernmat_Matern12_symmetric_cpp(const arma::mat& X, const arma::mat& Z, const arma::vec& parameters) {
   //input X1,X2,Z1,Z2,parameters
   unsigned int n = X.n_rows;
@@ -285,15 +286,12 @@ Rcpp::List kernmat_Matern12_symmetric_cpp(const arma::mat& X, const arma::mat& Z
   return Rcpp::List::create(_("full") =  Kfull,
                             _("elements") = Ks);
 }
-
+*/
 
 ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// gradients
 
-double evid_Matern_grad(const arma::mat& Kaa, const arma::mat& dK) {
-  return - 0.5 * arma::trace( Kaa * dK);
-}
-
-arma::mat evid_scale_Matern52_gradients(const arma::mat& X,const arma::mat& Z, const arma::mat& Kaa, const arma::cube& K, arma::vec L,const arma::vec& lambda, unsigned int B){
+/*
+inline arma::mat evid_scale_Matern52_gradients(const arma::mat& X,const arma::mat& Z, const arma::mat& Kaa, const arma::cube& K, arma::vec L,const arma::vec& lambda, unsigned int B){
   // produce a (p x B) matrix "grad" with the gradients of L
   unsigned int n = X.n_rows;
   unsigned int p = X.n_cols;
@@ -334,8 +332,9 @@ arma::mat evid_scale_Matern52_gradients(const arma::mat& X,const arma::mat& Z, c
   }
   return L;
 }
+*/
 
-arma::mat evid_scale_Matern32_gradients(const arma::mat& X, const arma::mat& Kaa, const arma::cube& K, arma::vec L, unsigned int B){
+inline arma::mat evid_scale_Matern32_gradients(const arma::mat& X, const arma::mat& Kaa, const arma::cube& K, arma::vec L, unsigned int B){
   // produce a (p x B) matrix "grad" with the gradients of L
   unsigned int n = X.n_rows;
   unsigned int p = X.n_cols;
@@ -372,8 +371,8 @@ arma::mat evid_scale_Matern32_gradients(const arma::mat& X, const arma::mat& Kaa
   return L;
 }
 
-
-arma::mat evid_scale_Matern12_gradients(const arma::mat& X, const arma::mat& Kaa, const arma::cube& K,arma::vec L, unsigned int B){
+/*
+inline arma::mat evid_scale_Matern12_gradients(const arma::mat& X, const arma::mat& Kaa, const arma::cube& K,arma::vec L, unsigned int B){
   // produce a (p x B) matrix "grad" with the gradients of L
   unsigned int n = X.n_rows;
   unsigned int p = X.n_cols;
@@ -409,6 +408,7 @@ arma::mat evid_scale_Matern12_gradients(const arma::mat& X, const arma::mat& Kaa
   }
   return L;
 }
+*/
 
 // reduced to only an output list due to specification of the optimizers
 // [[Rcpp::export]]
@@ -432,21 +432,27 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
   tmpK = invKmatn - alpha * alpha.t();
 
   //sigma
-  gradients[0] = - 0.5 * arma::trace( tmpK ) * exp( parameters[0] ); // thus avoid allocating dK
+  gradients[0] = sigma_gradient(tmpK, parameters[0]);
 
   //lambda
   for(unsigned int b=0;b<B;b++){
-    gradients[2+b] = evid_Matern_grad(tmpK, K.slice(b));
+    gradients[2+b] = evid_grad(tmpK, K.slice(b));
   }
 
   //L
+  /*
   switch(rho){
-    case 0: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern12_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), B);
+    /case 0: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern12_gradients(X, tmpK, K,
+                                                 parameters.rows(2+B,1+B*(px+1)), B);
       break;
-    case 1: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern32_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), B);
+    case 1: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern32_gradients(X, tmpK, K,
+                                                 parameters.rows(2+B,1+B*(px+1)), B);
       break;
-    case 2: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern52_gradients(X, Z, tmpK, K, parameters.rows(2+B,1+B*(px+1)), parameters.rows(2,1+B), B);
+    case 2: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern52_gradients(X, Z, tmpK, K,
+                              parameters.rows(2+B,1+B*(px+1)), parameters.rows(2,1+B), B);
   }
+  */
+  gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern32_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), B);
 
   //mu - gradient approach
   gradients[1]=0; //arma::sum( invKmatn * ybar )
@@ -454,7 +460,7 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
   //RMSE
   stats(0) = pow(arma::norm(ybar - (Kfull * alpha)),2);
   //Evidence
-  stats(1) = - 0.5 * (n * log( 2.0 * arma::datum::pi ) + sum(log(eigenval)) + arma::dot( ybar, alpha ) ) ;
+  stats(1) = logevidence(y, alpha, eigenval, n);
   //stats is returned as a reference
 
   //clip gradients

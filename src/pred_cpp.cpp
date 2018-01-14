@@ -17,7 +17,6 @@ Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
 
   tmp = K_xX * invK_XX;
   y_x = mean_y + std_y * (tmp * (y_X - mu) + mu);
-  //y_x = mean_y + std_y * y_x;
 
   K_xx = K_xx - tmp * K_xX.t();
   K_xx.diag() += exp(sigma);
@@ -61,17 +60,13 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
     Kmarg_xx = K_xx.slice(0);
   }
 
-  //invK_XX.diag() = invK_XX.diag() + 0.00001;
   tmp = Kmarg_xX * invK_XX;
-  //y_x = std_y * tmp * (y_X - mu);
-  y_x = std_y * tmp * (y_X - mu)/std_Z;
+  y_x = std_y * tmp * (y_X - mu) / std_Z;
 
   Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t(); //saving storage
 
-  //- 2 dK invK K + dK invK dK
-
   //taking absolute value as this can be numerically unstable:
-  ci.col(1) =  std_y * 1.96 * sqrt(abs(Kmarg_xx.diag()))/std_Z;
+  ci.col(1) =  std_y * 1.96 * sqrt(abs(Kmarg_xx.diag())) / std_Z;
   ci.col(0) = y_x - ci.col(1);
   ci.col(1) = y_x + ci.col(1);
 
@@ -83,7 +78,7 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const double sigma, const dou
     arma::vec ate_ci(2);
 
     //eficient ci calculation
-    ate_ci(1) = std_y * sqrt(arma::sum(arma::sum(Kmarg_xx))/pow(nx,2));
+    ate_ci(1) = std_y * sqrt(arma::accu(Kmarg_xx)) / nx;
     ate_ci(0) = ate - 1.96*ate_ci(1);
     ate_ci(1) = ate + 1.96*ate_ci(1);
 

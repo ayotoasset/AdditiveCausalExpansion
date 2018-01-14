@@ -19,4 +19,23 @@ inline arma::mat uppertri2symmat(const arma::vec& matvec,
   return out;
 }
 
+// general gradient equation, dK is the matrix of elementwise derivatives wrt to a parameter, kernel agnostic
+inline double evid_grad(const arma::mat& Kaa,
+                        const arma::mat& dK) {
+  return - 0.5 * arma::trace(Kaa * dK);
+}
+
+// gradient wrt to sigma, kernel agnostic
+inline double sigma_gradient(const arma::mat& Kaa, double sigma) {
+  return - 0.5 * arma::trace(Kaa) * exp(sigma);
+}
+
+inline double logevidence(const arma::vec& y, const arma::colvec& alpha, const arma::vec& eigenval, const unsigned int& n) {
+ return - 0.5 * (n * log(2.0 * arma::datum::pi) + sum(log(eigenval)) + arma::dot(y, alpha));
+
+}
+
+
+
+
 #endif //ACE_KERNELUTILITIES_H
