@@ -49,7 +49,7 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
     }
   }
   for(unsigned int i = px + 1; i < (px + pz + 1); i++){
-    if(isbinary(i - 1)==0){
+    if(isbinary(i - 1) == 0){
       moments(i, 0) = mean(Z.col(i - px - 1));
       Z.col(i - px - 1) = Z.col(i - px - 1) - moments(i, 0);
     }
