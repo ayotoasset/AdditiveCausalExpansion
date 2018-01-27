@@ -17,9 +17,8 @@ linear_spline <- setRefClass("linear_spline",
                            testbasis = function(Znew){
                              #get new basis matrices
                              if(!missing(Znew)){
-                               n <- length(Znew)
                                Bnew <- matrix(Znew)
-                               dBnew <- matrix(1,n,1) # 0 -> 1
+                               dBnew <- matrix(1, length(Znew), 1) # 0 -> 1
                              } else {
                                #return stored matrices
                                Bnew <- matrix(B)
