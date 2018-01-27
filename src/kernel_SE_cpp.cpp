@@ -47,9 +47,12 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,
       for(unsigned int c = 0; c < n2; c++){
         if (Z2(c,b-1) == 0 ) {
           tmpX(r,c,b) = 0;
-          continue;
+          //continue;
+        } else {
+          tmpX(r,c,b) = (sign(Z1(r, b - 1)) * sign(Z2(c, b - 1))) * exp(parameters[2 + b] - tmpX(r, c, b) + log(std::abs(Z1(r, b - 1))) + log(std::abs(Z2(c, b - 1))));
         }
-        tmpX(r,c,b) = exp(parameters[2+b] - tmpX(r,c,b)) * Z1(r,b-1) * Z2(c,b-1); //lambda[b]
+
+        //tmpX(r,c,b) = exp(parameters[2+b] - tmpX(r,c,b)) * Z1(r,b-1) * Z2(c,b-1); //lambda[b]
         //tmpX(r,c,b) = exp(parameters[2+b] - tmpX(r,c,b) - pow(Z1(r,b-1) - Z2(c,b-1),2) ); // replace each element of tmpX
       }
     }
@@ -107,7 +110,11 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X,
           cnt++;
           continue;
         }
-        tmpX(cnt, b) = exp(parameters[2 + b] - tmpX(cnt, b) ) * Z(r, b - 1) * Z(c, b - 1);
+        if (Z(r, b - 1) == 0){
+          tmpX(cnt, b) = 0;
+        } else {
+          tmpX(cnt, b) = (sign(Z(r, b - 1)) * sign(Z(c, b - 1))) * exp(parameters[2 + b] - tmpX(cnt, b) + log(std::abs(Z(r, b - 1))) + log(std::abs(Z(c, b - 1))));
+        }
         cnt++;
       }
     }
