@@ -35,7 +35,8 @@ inline double logevidence(const arma::vec& y, const arma::colvec& alpha, const a
 
 }
 
-
-
+inline double sign(double x) {
+  return (0 < x) - (x < 0);
+}
 
 #endif //ACE_KERNELUTILITIES_H
