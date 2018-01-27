@@ -9,7 +9,7 @@
 #' @return Returns the MAP and the 95 percent credible interval of the fitted process as a list.
 
 
-predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
+predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, normalize = TRUE){
   isbinary <- object$train_data$Zbinary
   #this function returns the prediction for the fitted Gaussian process
 
@@ -20,30 +20,33 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
     newZ.intern <- object$train_data$Z #normalized
 
   } else if (missing(newX) && !missing(newZ)){
-    newX.intern <- as.matrix(data.table::copy(object$train_data$X)) #normalized
+    newX.intern <- as.matrix(rlang::duplicate(object$train_data$X)) #normalized
 
     if (length(newZ) == 1) {
       newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
     } else {
-      newZ.intern <- as.matrix(data.table::copy(newZ))
+      newZ.intern <- as.matrix(rlang::duplicate(newZ))
 
       #normalize the non-binary variables
-      normalize_test(newX.intern, newZ.intern, object$moments)
+      if(normalize){
+        normalize_test(newX.intern, newZ.intern, object$moments)
+      }
       newX.intern <- object$train_data$X
     }
   } else if (!missing(newX) && missing(newZ)) {
-    newX.intern <- as.matrix(data.table::copy(newX))
+    newX.intern <- as.matrix(rlang::duplicate(newX))
     if (!marginal) {
       cat("No newZ given, using 0.\n")
     }
     newZ.intern <- matrix(rep(0, nrow(newX.intern)), nrow(newX.intern), 1)
 
     #normalize the non-binary variables
-    normalize_test(newX.intern, newZ.intern, object$moments)
-
+    if(normalize){
+      normalize_test(newX.intern, newZ.intern, object$moments)
+    }
   }  else if (!missing(newX) && !missing(newZ)) {
-    newX.intern <- as.matrix(data.table::copy(newX))
-    newZ.intern <- as.matrix(data.table::copy(newZ))
+    newX.intern <- as.matrix(rlang::duplicate(newX))
+    newZ.intern <- as.matrix(rlang::duplicate(newZ))
 
     if (ncol(newX.intern) != ncol(object$train_data$X)) {
       stop("Dimension mismatch of X with newX", call. = FALSE)
@@ -55,7 +58,9 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE){
       newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
     }
     #normalize the non-binary variables
-    normalize_test(newX.intern, newZ.intern, object$moments)
+    if(normalize){
+      normalize_test(newX.intern, newZ.intern, object$moments)
+    }
   }
 
   if (any(abs(newX.intern) > 1)){

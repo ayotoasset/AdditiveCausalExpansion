@@ -96,7 +96,7 @@ ace.train <- function(y, X, Z,
                       beta1         = 0.9,
                       beta2         = 0.999,
                       momentum      = 0.0,
-                      norm.clip     = TRUE,
+                      norm.clip     = (optimizer!="Nadam") | (optimizer!="Adam")  ,
                       clip.at       = 1) {
 
   if (class(y) == "factor") {
@@ -109,8 +109,8 @@ ace.train <- function(y, X, Z,
   if (class(Z) == "factor") {
     Z <- (as.numeric(Z)-1)
   }
-  Z.intern <- matrix(as.numeric(data.table::copy(Z)))
-  X.intern <- as.matrix(data.table::copy(X))
+  Z.intern <- matrix(as.numeric(rlang::duplicate(Z)))
+  X.intern <- as.matrix(rlang::duplicate(X))
 
   if ((class(Z) == "matrix") || (class(Z)== "data.frame")) {
     pz <- ncol(Z)
