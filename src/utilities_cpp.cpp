@@ -20,20 +20,47 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
   moments.col(2).zeros();
 
   //create index of binary variables in X and Z
-  arma::uvec isbinary(px + pz);
-  unsigned long long tmp;
+  arma::uvec isbinary(px + pz); isbinary.zeros();
+  arma::vec tmp;
+  // X
   for(unsigned int i = 0; i < px; i++){
-    tmp = sum(pow(arma::unique(X.col(i)), 0));
-    isbinary(i) = moments(i + 1, 2) = (tmp <= 2); // ugly but works
-    if(tmp == 1){
+    tmp = arma::unique(X.col(i));
+    if(tmp.n_elem == 2) {
+      isbinary(i) = moments(i + 1, 2) = 1;
+      if(arma::min(tmp) != 0) {
+        //set smaller value to zero
+        moments(i, 0) = arma::min(tmp);
+      }
+      if(arma::max(tmp) != 1) {
+        //set larger value to one
+        moments(i, 1) = (arma::max(tmp)- arma::min(tmp));
+      }
+      // locate and scale:
+      X.col(i) -= moments(i, 0);
+      X.col(i) /= moments(i, 1);
+
+    } else if(tmp.n_elem == 1) {
       Rcout << "Column " << i + 1 << " of X is constant." << std::endl;
       X.col(i).zeros();
     }
   }
+  // Z
   for(unsigned int i = px; i < (px + pz); i++){
-    tmp = arma::sum(arma::pow(arma::unique(Z.col(i - px)), 0)); // ugly
-    isbinary(i) = moments(i + 1, 2) = (tmp <= 2); // ugly
-    if(tmp == 1){
+    tmp = arma::unique(Z.col(i - px));
+    if(tmp.n_elem == 2) {
+      isbinary(i) = moments(i + 1, 2) = 1;
+      if(arma::min(tmp) != 0) {
+        //set smaller value to zero
+        moments(i, 0) = arma::min(tmp);
+      }
+      if(arma::max(tmp) != 1) {
+        //set larger value to one
+        moments(i, 1) = (arma::max(tmp)- arma::min(tmp));
+      }
+      // locate and scale:
+      Z.col(i - px) -= moments(i, 0);
+      Z.col(i - px) /= moments(i, 1);
+    } else if(tmp.n_elem == 1){
       Rcout << "Column " << i << " of Z is constant." << std::endl;
       Z.col(i).zeros();
     }
@@ -45,13 +72,13 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
   for(unsigned int i = 1; i < (px + 1); i++){
     if(isbinary(i - 1) == 0){
       moments(i, 0) = mean(X.col(i - 1));
-      X.col(i - 1) = X.col(i - 1) - moments(i, 0);
+      X.col(i - 1) -= moments(i, 0);
     }
   }
   for(unsigned int i = px + 1; i < (px + pz + 1); i++){
     if(isbinary(i - 1) == 0){
       moments(i, 0) = mean(Z.col(i - px - 1));
-      Z.col(i - px - 1) = Z.col(i - px - 1) - moments(i, 0);
+      Z.col(i - px - 1) -= moments(i, 0);
     }
   }
   //rescale
@@ -60,11 +87,11 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
   for(unsigned int i = 1; i < (px + 1); i++){
     if(isbinary(i - 1) == 0){
       moments(i, 1) = arma::max(abs(X.col(i - 1)));
-      X.col(i - 1) = X.col(i - 1) / moments(i, 1);
-    } else {
+      X.col(i - 1) /= moments(i, 1);
+    } /*else {
       moments(i, 1) = 1;//arma::stddev(X.col(i-1));
-      X.col(i - 1) = X.col(i - 1) / moments(i, 1);
-    }
+      X.col(i - 1) /=  moments(i, 1);
+    }*/
   }
   //important for Z to be within unit circle for splines
   for(unsigned int i = px + 1; i < (px + pz + 1); i++){
