@@ -105,7 +105,7 @@ ace.train <- function(y, X, Z,
   px <- ncol(X)
   y  <- matrix(y)
 
-  if (class(Z) == "factor") Z <- (as.numeric(Z)-1)
+  if (is.factor(Z)) Z <- (as.numeric(Z)-1)
 
   # create manual copy of variable since calling cpp functions with reference for normalization
   Z.intern <- matrix(as.numeric(rlang::duplicate(Z)))
@@ -132,35 +132,22 @@ ace.train <- function(y, X, Z,
   isbinary <- (moments[(2 + px):(1 + pz + px), 3]==1)
   if (all(isbinary)) {
     cat("Assuming binary Z\n")
-    spline = "binary"
+    basis = "binary"
   } else cat("Non-Binary Z detected\n")
 
-
   #### select chosen spline or appropriate based on data ###
-  if ( (spline == "binary") || (basis == "linear")) {
-    cat("Using binary/linear-basis\n")
-    myBasis <- linear_spline$new()
-  } else if (isuniv && (basis == "B")) {
-    cat("Using B-spline\n")
-    myBasis <- B_spline$new()
-  } else if (isuniv && (basis == "square")) {
-    cat("Using square-basis\n")
-    myBasis <- square_spline$new()
-  } else if (isuniv && (basis == "cubic")) {
-    cat("Using cubic-basis\n")
-    myBasis <- ns_spline$new()
-    n.knots = 0
-  } else if (isuniv) {
-    cat("Using NC-spline\n")
-    myBasis <- ns_spline$new()
-  }
+  if ( (basis == "binary") || (basis == "linear")) myBasis <- linear_spline$new()
+  else if (isuniv && (basis == "B")) myBasis <- B_spline$new()
+  else if (isuniv && (basis == "square")) myBasis <- square_spline$new()
+  else if (isuniv && (basis == "cubic")) myBasis <- ns_spline$new()
+  else if (isuniv) myBasis <- ns_spline$new()
 
   #generate basis
   myBasis$trainbasis(Z.intern, n.knots) #binary "spline" discards n_knots
 
   #Gaussian Process kernel (only SE and Matern so far)
   if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(y, px, myBasis$dim(), myBasis$B)
-  else myKernel <- KernelClass_SE_R6$new(y, px, myBasis$dim(), myBasis$B)
+  else                      myKernel <- KernelClass_SE_R6$new(y, px, myBasis$dim(), myBasis$B)
 
   #initialize optimizer
   if (optimizer=="Adam") myOptimizer = optAdam$new(myKernel, lr = learning_rate, beta1 = beta1, beta2 = beta2,
