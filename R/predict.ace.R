@@ -22,63 +22,46 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, no
   } else if (missing(newX) && !missing(newZ)){
     newX.intern <- as.matrix(rlang::duplicate(object$train_data$X)) #normalized
 
-    if (length(newZ) == 1) {
-      newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
-    } else {
-      newZ.intern <- as.matrix(rlang::duplicate(newZ))
-
+    if (length(newZ) == 1) newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
+    else {
       #normalize the non-binary variables
-      if(normalize){
-        normalize_test(newX.intern, newZ.intern, object$moments)
-      }
+      newZ.intern <- as.matrix(rlang::duplicate(newZ))
+      if(normalize) normalize_test(newX.intern, newZ.intern, object$moments)
       newX.intern <- object$train_data$X
     }
   } else if (!missing(newX) && missing(newZ)) {
     newX.intern <- as.matrix(rlang::duplicate(newX))
-    if (!marginal) {
-      cat("No newZ given, using 0.\n")
-    }
+    if (!marginal) cat("No newZ given, using 0.\n")
+
     newZ.intern <- matrix(rep(0, nrow(newX.intern)), nrow(newX.intern), 1)
 
     #normalize the non-binary variables
-    if(normalize){
-      normalize_test(newX.intern, newZ.intern, object$moments)
-    }
+    if(normalize) normalize_test(newX.intern, newZ.intern, object$moments)
+
   }  else if (!missing(newX) && !missing(newZ)) {
     newX.intern <- as.matrix(rlang::duplicate(newX))
     newZ.intern <- as.matrix(rlang::duplicate(newZ))
 
-    if (ncol(newX.intern) != ncol(object$train_data$X)) {
-      stop("Dimension mismatch of X with newX", call. = FALSE)
-    }
-    if ((ncol(newZ.intern) != ncol(object$train_data$Z)) && (length(newZ) != 1)) {
-      stop("Dimension mismatch of Z with newZ", call. = FALSE)
-    }
-    if (length(newZ) == 1) {
-      newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
-    }
+    if (ncol(newX.intern) != ncol(object$train_data$X)) stop("Dimension mismatch of X with newX", call. = FALSE)
+    if ((ncol(newZ.intern) != ncol(object$train_data$Z)) && (length(newZ) != 1)) stop("Dimension mismatch of Z with newZ", call. = FALSE)
+    if (length(newZ) == 1) newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
+
     #normalize the non-binary variables
-    if(normalize){
-      normalize_test(newX.intern, newZ.intern, object$moments)
-    }
+    if(normalize) normalize_test(newX.intern, newZ.intern, object$moments)
   }
 
-  if (any(abs(newX.intern) > 1)){
-    cat("Some values of X outside the unit-circle of the training data.\n")
-    #apply(abs(newX.intern), 2, max)
-  }
+  if (any(abs(newX.intern) > 1)) cat("Some values of X outside the unit-circle of the training data.\n")
 
   #get appropriate basis
-  if(!marginal){
-    pred_list <- object$Kernel$predict(object$train_data$y,
-                                       object$train_data$X,
-                                       object$Basis$B,
-                                       newX.intern,
-                                       object$Basis$testbasis(newZ.intern)$B,
-                                       object$moments[1, 1],
-                                       object$moments[1, 2])
-  } else {
-    test.basis = object$Basis$testbasis(newZ.intern)
+  if(!marginal) pred_list <- object$Kernel$predict(object$train_data$y,
+                                                   object$train_data$X,
+                                                   object$Basis$B,
+                                                   newX.intern,
+                                                   object$Basis$testbasis(newZ.intern)$B,
+                                                   object$moments[1, 1],
+                                                   object$moments[1, 2])
+  else {
+    test.basis <- object$Basis$testbasis(newZ.intern)
     pred_list <- object$Kernel$predict_marginal(y = object$train_data$y,
                                                 X = object$train_data$X,
                                                 Z = object$Basis$B,
@@ -90,6 +73,6 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, no
                                                 std_Z = object$moments[dim(object$moments)[1], 2],
                                                 calculate_ate = (isbinary && causal))
   }
-  pred_list
+  invisible(pred_list)
 }
 
