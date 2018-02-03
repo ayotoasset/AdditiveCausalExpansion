@@ -19,7 +19,8 @@ Imports: methods,
          Rcpp (>= 0.12.12),
          splines2 (>= 0.2.6),
          Formula (>= 1.2),
-         rlang (>= 0.1.6)
+         rlang (>= 0.1.6),
+         R6
 Suggests: plotly (>= 4.7),
           ggplot2 (>= 2.2.1)
 LinkingTo: Rcpp, RcppArmadillo (>= 0.8.200.0)

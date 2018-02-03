@@ -99,71 +99,45 @@ ace.train <- function(y, X, Z,
                       norm.clip     = (optimizer!="Nadam") | (optimizer!="Adam")  ,
                       clip.at       = 1) {
 
-  if (class(y) == "factor") {
-    stop("y is not numeric. This package does not support classification tasks.")
-  }
+  if (class(y) == "factor") stop("y is not numeric. This package does not support classification tasks.")
+
   n  <- length(y)
   px <- ncol(X)
-  y  <- matrix(y) #data.table::copy(
+  y  <- matrix(y)
+
+  if (class(Z) == "factor") Z <- (as.numeric(Z)-1)
+
   # create manual copy of variable since calling cpp functions with reference for normalization
-  if (class(Z) == "factor") {
-    Z <- (as.numeric(Z)-1)
-  }
   Z.intern <- matrix(as.numeric(rlang::duplicate(Z)))
   X.intern <- as.matrix(rlang::duplicate(X))
 
-  if ((class(Z) == "matrix") || (class(Z)== "data.frame")) {
-    pz <- ncol(Z)
-  } else if (length(c(Z)) == n ) {
-    pz <- 1
-  } else {
-    stop("Dimension/filetype of Z invalid.\n")
-  }
+  if ((class(Z) == "matrix") || (class(Z)== "data.frame")) pz <- ncol(Z)
+  else if (length(c(Z)) == n ) pz <- 1
+  else stop("Dimension/filetype of Z invalid.\n")
 
-  if ( !all(dim(X.intern) == c(n, px))) {
-    stop("Dimension of X not correct. Use the observations as rows and variables as columns
-         and check the number of observations with respect to y.\n")
-  }
-  if ( !all(dim(Z.intern) == c(n, pz))) {
-    stop("Dimension of Z not correct. Use the observations as rows and variables as columns
-         and check the number of observations with respect to y.\n")
-  }
+  if (!all(dim(X.intern) == c(n, px))) stop("Dimension of X not correct. Use the observations
+                                             as rows and variables as columns and check the number
+                                             of observations with respect to y.\n")
+  if (!all(dim(Z.intern) == c(n, pz))) stop("Dimension of Z not correct. Use the observations as
+                                             rows and variables as columns and check the number of
+                                             observations with respect to y.\n")
 
   #normalize variables
   moments <- normalize_train(y, X.intern, Z.intern)
 
   #check whether Z is univariate
-  if (pz > 1) {
-    isuniv = FALSE
-  } else {
-    isuniv = TRUE
-  }
-  #check whether Z is binary
-  if (isbinary <- (length(unique(c(Z))) == 2)) {
-    cat("Binary Z detected\n")
-    spline = "binary"
-  } else {
-    cat("Non-Binary Z detected\n")
-    isbinary = FALSE
-  }
+  isuniv = (pz == 1)
 
-  #Gaussian Process kernel (only SE and Matern so far)
-  if (kernel == "Matern32") {
-    cat("Using Matern 3/2 kernel\n")
-    myKernel <- KernelClass_Matern32$new()
-  #} else if (kernel == "Matern12") {
-  #  cat("Using Matern 1/2 kernel\n")
-  #  myKernel <- KernelClass_Matern12$new()
-  #} else if (kernel == "Matern52") {
-  #  cat("Using Matern 5/2 kernel\n")
-  #  myKernel <- KernelClass_Matern52$new()
-  } else {
-    cat("Using SE kernel\n")
-    myKernel <- KernelClass_SE$new()
-  }
+  #check whether Z is binary
+  isbinary <- momnents[(2 + px):(1 + pz + px), 3]
+  if (all(isbinary)) {
+    cat("Assuming binary Z\n")
+    spline = "binary"
+  } else cat("Non-Binary Z detected\n")
+
 
   #### select chosen spline or appropriate based on data ###
-  if (isuniv && ((isbinary && (spline == "binary")) || (basis == "linear"))) {
+  if ( (spline == "binary") || (basis == "linear")) {
     cat("Using binary/linear-basis\n")
     myBasis <- linear_spline$new()
   } else if (isuniv && (basis == "B")) {
@@ -184,22 +158,20 @@ ace.train <- function(y, X, Z,
   #generate basis
   myBasis$trainbasis(Z.intern, n.knots) #binary "spline" discards n_knots
 
-  #initialize Kernel parameters given the spline basis dimension (e.g.: binary:2, ncs: n_knots+3)
-  myKernel$parainit(y, px, myBasis$dim(), myBasis$B)
+  #Gaussian Process kernel (only SE and Matern so far)
+  if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(y, px, myBasis$dim(), myBasis$B)
+  else myKernel <- KernelClass_SE_R6$new(y, px, myBasis$dim(), myBasis$B)
 
   #initialize optimizer
-  if(optimizer=="Adam") {
-    myOptimizer = optAdam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2, norm.clip =  norm.clip, clip.at = clip.at)
-  } else if(optimizer=="Nadam") {
-    myOptimizer = optNadam$new(lr = learning_rate, beta1 = beta1, beta2 = beta2, norm.clip =  norm.clip, clip.at = clip.at)
-  } else if(optimizer == "GD" || optimizer=="Nesterov") {
-    if(optimizer == "GD") {
-      momentum = 0.0
-    }
-    myOptimizer = optNesterov$new(lr = learning_rate, momentum = momentum, norm.clip =  norm.clip, clip.at = clip.at)
+  if (optimizer=="Adam") myOptimizer = optAdam$new(myKernel, lr = learning_rate, beta1 = beta1, beta2 = beta2,
+                                                   norm.clip =  norm.clip, clip.at = clip.at)
+  else if (optimizer=="Nadam") myOptimizer = optNadam$new(myKernel, lr = learning_rate, beta1 = beta1, beta2 = beta2,
+                                                          norm.clip =  norm.clip, clip.at = clip.at)
+  else if (optimizer == "GD" || optimizer=="Nesterov") {
+    if(optimizer == "GD") momentum = 0.0
+    myOptimizer = optNesterov$new(myKernel, lr = learning_rate, momentum = momentum,
+                                  norm.clip =  norm.clip, clip.at = clip.at)
   }
-  # initialize optimization help variables (mu, nu, etc.)
-  myOptimizer$initOpt(myKernel)
 
   stats = matrix(0, 2, maxiter + 2) #Evidence and RMSE
 
@@ -215,9 +187,7 @@ ace.train <- function(y, X, Z,
       }
   }
   convergence.flag = (iter < maxiter)
-  if(!convergence.flag) {
-    cat("Optimization stopped: maximum iterations reached\n")
-  }
+  if(!convergence.flag) cat("Optimization stopped: maximum iterations reached\n")
 
   stats[, iter+2] = myKernel$get_train_stats(y, X.intern, myBasis$B)
 
@@ -226,7 +196,7 @@ ace.train <- function(y, X, Z,
   graphics::plot(stats[1, 3:(iter + 2)], type="l", ylab="training RMSE", xlab="Iteration")
   graphics::par(mfrow=c(1, 1))
 
-  structure(list(Kernel = myKernel, Basis = myBasis, OptimSettings = list(optim = optimizer,
+  invisible(structure(list(Kernel = myKernel, Basis = myBasis, OptimSettings = list(optim = optimizer,
                                                                             lr = learning_rate,
                                                                             momentum = momentum,
                                                                             beta1 = beta1,
@@ -235,7 +205,7 @@ ace.train <- function(y, X, Z,
                  moments = moments,
                  train_data = list(y = y, X = X.intern, Z = Z.intern, Zbinary = isbinary),
                  convergence = convergence.flag),
-                 class = "ace")
+                 class = "ace"))
 }
 
 #' Fit GPspline, data.frame wrapper of GPspline.train
@@ -313,5 +283,5 @@ ace <- function(formula, data,
   colnames(out_object$train_data$X) <- all.vars(formula(myformula, lhs=0, rhs=1))
   colnames(out_object$train_data$Z) <- all.vars(formula(myformula, lhs=0, rhs=2))
 
-  out_object
+  invisible(out_object)
 }

@@ -117,3 +117,15 @@ void normalize_test(arma::mat& X, arma::mat& Z, const arma::mat& moments) {
     Z.col(i) = (Z.col(i) - moments(i + 1 + px, 0)) / moments(i + 1 + px, 1);
   }
 }
+
+// [[Rcpp::export]]
+void norm_clip_cpp(bool flag, arma::vec& grads, double max_length){
+  // cut gradients by reference if flag true and norm above max_length
+  if(flag) {
+    double L2_norm = arma::norm(grads);
+    if ((L2_norm > max_length) &  arma::is_finite(L2_norm) & (L2_norm != 0)) {
+      grads = grads / L2_norm;
+    }
+  }
+}
+
