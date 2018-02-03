@@ -103,14 +103,14 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X,
         cnt += (n - r);
         continue;
       }
-      for(unsigned int c = r; c < n; c++){
+      for(unsigned int c = r; c < n; c++) {
         // replace each element of tmpX
         if (Z(c, b - 1) == 0) {
           tmpX(cnt, b) = 0;
           cnt++;
           continue;
         }
-        if (Z(r, b - 1) == 0){
+        if (Z(r, b - 1) == 0) {
           tmpX(cnt, b) = 0;
         } else {
           tmpX(cnt, b) = (sign(Z(r, b - 1)) * sign(Z(c, b - 1))) * exp(parameters[2 + b] - tmpX(cnt, b) + log(std::abs(Z(r, b - 1))) + log(std::abs(Z(c, b - 1))));
