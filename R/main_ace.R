@@ -129,7 +129,7 @@ ace.train <- function(y, X, Z,
   isuniv = (pz == 1)
 
   #check whether Z is binary
-  isbinary <- momnents[(2 + px):(1 + pz + px), 3]
+  isbinary <- (moments[(2 + px):(1 + pz + px), 3]==1)
   if (all(isbinary)) {
     cat("Assuming binary Z\n")
     spline = "binary"
