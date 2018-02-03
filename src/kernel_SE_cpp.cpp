@@ -135,24 +135,22 @@ Rcpp::List invkernel_cpp(arma::mat pdmat,
                          const double& sigma){
   unsigned int n = pdmat.n_cols;
   arma::vec eigval(n); eigval.ones();
-  arma::mat eigvec(n, n); eigvec.eye();
+  //arma::mat eigvec = pdmat;
   pdmat.diag() += exp(sigma);
 
-  if(!arma::eig_sym(eigval, eigvec, pdmat)){
+  if(!arma::eig_sym(eigval, pdmat, pdmat)){
     Rcout << "Eigenvalue decomp. not completed." << std::endl;
   }
 
   //get inverse and eigenvalues
-  arma::mat invKmat(n, n);
-
-  invKmat = eigvec;
+  //arma::mat invKmat = pdmat;
   for(unsigned int i = 0; i < n; i++){
-    invKmat.col(i) = invKmat.col(i) / eigval[i];
+    pdmat.col(i) = pdmat.col(i) / sqrt(eigval[i]);
   }
-  invKmat = invKmat * eigvec.t();
+  pdmat = pdmat * pdmat.t();
 
-  return Rcpp::List::create(_("eigenval") =  eigval,
-                            _("inv") = invKmat);
+  return Rcpp::List::create(_("eigenval") = eigval,
+                            _("inv") = pdmat);
 }
 
 ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// ///// gradients
@@ -236,3 +234,52 @@ arma::vec grad_SE_cpp(const arma::vec& y,
 
   return gradients;
 }
+///////////////////
+/*
+// [[Rcpp::export]]
+arma::vec para_update_SE_cpp(unsigned int iter, unsigned int B,
+                             const arma::vec& y, const arma::mat& X, const arma::mat& Z,
+                             Rcpp::Reference Optim, unsigned int printevery,
+                             arma::vec& parameters){
+  arma::vec stats(2);
+  unsigned int n = X.n_rows;
+
+  Rcpp::List kmat = kernmat_SE_symmetric_cpp(X, Z, parameters);
+  Rcpp::List invKmat = invkernel_cpp(kmat[0], parameters[0]); //check if sigma, return Kfull
+
+  parameters = grad_SE_cpp(y, X, Z, Kmat, Karray, invKmat[0], invKmat[1], parameters, stats, B)
+
+  Optim
+
+  return stats;
+}
+
+ OPTIM
+ para_update = function(iter, y, X, Z, Optim, printevery=100) {
+#update Kmat and invKmat in the class environment
+ stats <- c(0, 0)
+invKmatList <- getinv_kernel(X, Z);
+
+gradients <- grad_SE_cpp(y, X, Z,
+                         Kmat, Karray,
+invKmatn, invKmatList$eigenval,
+parameters, stats, B)
+parameters <<- Optim$update(iter, parameters, gradients)
+
+private$mean_solution(y) #overwrites mu gradient update
+
+if (iter %% printevery == 0) {
+cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n",
+            iter, stats[2], stats[1]))
+}
+
+ USING REF CLASSES IN C++:
+ More easily, you can use Rcpp::Reference:
+
+ // [[Rcpp::export]]
+ std::string getId(Reference obj) {
+std::string txt = obj.field("id");
+return txt;
+ }
+
+ */
