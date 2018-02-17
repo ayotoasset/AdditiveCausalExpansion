@@ -8,8 +8,8 @@ B_spline <- R6::R6Class("B_spline",
                           dim = function(){
                             (ncol(B)+1); #basis plus nuisance term m()
                           },
-                          trainbasis = function(Z, n_knots, m = 4) {
-                            cat("Using B-spline\n")
+                          trainbasis = function(Z, n_knots, m = 4, verbose=FALSE) {
+                            if (verbose) cat("Using B-spline\n")
                             #internal knots (within unit circle)
                             IKnots <- quantile(Z,probs = seq(n_knots)/(n_knots+1))
                             B <<- splines2::bSpline(Z,

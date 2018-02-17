@@ -8,8 +8,8 @@ square_spline <- R6::R6Class("square_spline",
                                dim = function(){
                                  (ncol(B) + 1) #basis plus nuisance term m()
                                },
-                               trainbasis = function(Z, n_knots) {
-                                 cat("Using square-basis\n")
+                               trainbasis = function(Z, n_knots, verbose=FALSE) {
+                                 if (verbose) cat("Using square-basis\n")
                                  n <- length(Z)
 
                                  #generate matrices without intercept!

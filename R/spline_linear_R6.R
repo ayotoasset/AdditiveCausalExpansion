@@ -8,8 +8,8 @@ linear_spline <- R6::R6Class("linear_spline",
                                dim = function(){
                                  (ncol(B) + 1) #basis plus nuisance term m()
                                },
-                               trainbasis = function(Z, n_knots) {
-                                 cat("Using binary/linear-basis\n")
+                               trainbasis = function(Z, n_knots, verbose=FALSE) {
+                                 if (verbose) cat("Using binary/linear-basis\n")
                                  n <- length(Z)
                                  #generate matrices without intercept!
                                  B <<- matrix(Z,n,1)

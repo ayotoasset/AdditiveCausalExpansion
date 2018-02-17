@@ -10,8 +10,8 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                      Karray = NULL,
                                      B = NULL,
                                      p = NULL,
-                                     initialize = function(p_arg, B_arg, ext_init_parameters) {
-                                       cat("Using Matérn 3/2 kernel\n")
+                                     initialize = function(p_arg, B_arg, ext_init_parameters, verbose=FALSE) {
+                                       if (verbose) cat("Using Matérn 3/2 kernel\n")
                                        B <<- B_arg
                                        p <<- p_arg
                                        parameters <<- ext_init_parameters
@@ -34,7 +34,7 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                        invKmatn <<- invKmatList$inv
                                        invKmatList
                                      },
-                                     para_update = function(iter, y, X, Z, Optim, printevery=100) {
+                                     para_update = function(iter, y, X, Z, Optim, printevery=100, verbose=TRUE) {
                                        # update Kmat and invKmat in the class environment
                                        stats <- c(0,0)
                                        invKmatList <- getinv_kernel(X,Z);
@@ -47,11 +47,9 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
 
                                        mean_solution(y) # overwrites mu gradient update
 
-                                       if(iter%%printevery == 0) {
+                                       if ((iter %% printevery == 0)  && verbose) {
                                          cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n",
-                                                     iter, stats[2], stats[1]
-                                         )
-                                         )
+                                                     iter, stats[2], stats[1]))
                                        }
 
                                        stats

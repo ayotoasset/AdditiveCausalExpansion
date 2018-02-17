@@ -9,8 +9,8 @@ ns_spline <- R6::R6Class("ns_spline",
                            dim = function(){
                              (ncol(B) + 1) #basis plus nuisance term m()
                            },
-                           trainbasis = function(Z, n_knots) {
-                             cat("Using natural cubic-spline\n")
+                           trainbasis = function(Z, n_knots, verbose=FALSE) {
+                             if (verbose) cat("Using natural cubic-spline\n")
                              #internal knots (within unit circle)
                              if (n_knots > 0) IKnots <- quantile(Z, probs = seq(n_knots) / (n_knots + 1))
                              else IKnots <- NULL
