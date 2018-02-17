@@ -100,7 +100,6 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
       Z.col(i - px - 1) = Z.col(i - px - 1) / moments(i, 1);
     }
   }
-  //return moments
   return moments;
 }
 
