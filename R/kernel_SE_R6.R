@@ -10,17 +10,11 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
                                  Karray = NULL,
                                  B = NULL,
                                  p = NULL,
-                                 initialize = function(y, p, B, Z) {
+                                 initialize = function(p_arg, B_arg, ext_init_parameters) {
                                      cat("Using SE kernel\n")
-                                     Z <- as.matrix(Z)
-                                     B <<- B
-                                     p <<- p
-                                     n <- length(y)
-                                     parameters <<- matrix(c(0,0, # sigma, mu
-                                                             -log(c(1, diag(t(Z) %*% Z) / n)), # use inner product to scale
-                                                             rep(c(-1, rep(-1, B - 1)), p)/p # ARD parameters
-                                                            )
-                                                          )
+                                     B <<- B_arg
+                                     p <<- p_arg
+                                     parameters <<- ext_init_parameters
                                  },
                                  kernel_mat = function(X1, X2, Z1, Z2) {
                                    #intended use for prediction

@@ -43,16 +43,18 @@
 #' Y0 <- rnorm(n, mean = y0_true, sd = 1)
 #' Y1 <- rnorm(n, mean = y1_true, sd = 1)
 #' Y <- Y0 * (1-Z) + Y1 * Z
+#' pihatz = nnet(X, Z, size=10)$fitted.values
 #' # train model:
-#' my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
+#' my.GPS <- ace.train(Y, X, Z, pi = pihatz, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
 #' # print (sample) average treatment effect (ATE)
 #' predict(my.GPS, marginal = TRUE, causal = TRUE)$ate
 #' predict(my.GPS, marginal = TRUE, causal = TRUE)$att
 #' robust_treatment(my.GPS)
+#' abline(a=mean(y1_true - y0_true), b=0)
 #' #true ATE
 #' mean(y1_true - y0_true)
 #' # plot response curves
-#' plot(my.GPS, 1, marginal = FALSE, truefun = y_truefun)
+#' plot(my.GPS, 1, marginal = TRUE)
 #' # plot treatment curve
 #' treat_truefun <- function(x) {y_truefun(x, rep(1, nrow(x))) - y_truefun(x, rep(0, nrow(x)))}
 #' plot(my.GPS, 1, marginal = TRUE, truefun = treat_truefun)
@@ -85,21 +87,24 @@
 #' plot(my.GPS, truefun = y_truefun)
 #'
 
-ace.train <- function(y, X, Z,
-                      kernel        = "SE",
-                      basis         = "linear",
-                      n.knots       = 1,
-                      optimizer     = "Nadam",
-                      maxiter       = 1000,
-                      tol           = 1e-4,
-                      learning_rate = 0.01,
-                      beta1         = 0.9,
-                      beta2         = 0.999,
-                      momentum      = 0.0,
-                      norm.clip     = (optimizer!="Nadam") | (optimizer!="Adam")  ,
-                      clip.at       = 1) {
+ace.train <- function(y, X, Z, pi,
+                      kernel          = "SE",
+                      basis           = "linear",
+                      n.knots         = 1,
+                      optimizer       = "Nadam",
+                      maxiter         = 1000,
+                      tol             = 1e-4,
+                      learning_rate   = 0.01,
+                      beta1           = 0.9,
+                      beta2           = 0.999,
+                      momentum        = 0.0,
+                      norm.clip       = (optimizer!="Nadam") | (optimizer!="Adam")  ,
+                      clip.at         = 1,
+                      init_parameters = set_initial_parameters(px, myBasis$dim(), n, y, Z)) {
 
-  if (class(y) == "factor") stop("y is not numeric. This package does not support classification tasks.")
+
+
+  if (is.factor(y)) stop("y is not numeric. This package does not support classification tasks.")
 
   n  <- length(y)
   px <- ncol(X)
@@ -108,32 +113,39 @@ ace.train <- function(y, X, Z,
   if (is.factor(Z)) Z <- (as.numeric(Z)-1)
 
   # create manual copy of variable since calling cpp functions with reference for normalization
-  Z.intern <- matrix(as.numeric(rlang::duplicate(Z)))
+  Z.intern <- as.matrix(rlang::duplicate(Z))
   X.intern <- as.matrix(rlang::duplicate(X))
 
-  if ((class(Z) == "matrix") || (class(Z)== "data.frame")) pz <- ncol(Z)
+  if (is.matrix(Z) || is.data.frame(Z)) pz <- ncol(Z)
   else if (length(c(Z)) == n ) pz <- 1
   else stop("Dimension/filetype of Z invalid.\n")
 
   if (!all(dim(X.intern) == c(n, px))) stop("Dimension of X not correct. Use the observations
-                                             as rows and variables as columns and check the number
-                                             of observations with respect to y.\n")
+                                            as rows and variables as columns and check the number
+                                            of observations with respect to y.\n")
   if (!all(dim(Z.intern) == c(n, pz))) stop("Dimension of Z not correct. Use the observations as
-                                             rows and variables as columns and check the number of
-                                             observations with respect to y.\n")
+                                            rows and variables as columns and check the number of
+                                            observations with respect to y.\n")
 
   #normalize variables
   moments <- normalize_train(y, X.intern, Z.intern)
 
   #check whether Z is univariate
-  isuniv = (pz == 1)
+  isuniv <- (pz == 1)
 
   #check whether Z is binary
-  isbinary <- (moments[(2 + px):(1 + pz + px), 3]==1)
+  isbinary <- (moments[(2 + px):(1 + pz + px), 3] == 1)
   if (all(isbinary)) {
     cat("Assuming binary Z\n")
-    basis = "binary"
+    if (missing(pi)) basis <- "binary"
   } else cat("Non-Binary Z detected\n")
+
+  if (!missing(pi) && isuniv) {
+    pi.intern <- as.matrix(rlang::duplicate(pi))
+    if (!isbinary) pi.intern <- (pi.intern - moments[2 + px, 1]) / moments[2 + px, 2]
+    Z.intern <- Z.intern - pi.intern
+    #isbinary <- FALSE
+  }
 
   #### select chosen spline or appropriate based on data ###
   if ( (basis == "binary") || (basis == "linear")) myBasis <- linear_spline$new()
@@ -146,8 +158,8 @@ ace.train <- function(y, X, Z,
   myBasis$trainbasis(Z.intern, n.knots) #binary "spline" discards n_knots
 
   #Gaussian Process kernel (only SE and Matern so far)
-  if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(y, px, myBasis$dim(), myBasis$B)
-  else                      myKernel <- KernelClass_SE_R6$new(y, px, myBasis$dim(), myBasis$B)
+  if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(px, myBasis$dim(), init_parameters)
+  else                      myKernel <- KernelClass_SE_R6$new(px, myBasis$dim(), init_parameters)
 
   #initialize optimizer
   if (optimizer=="Adam") myOptimizer = optAdam$new(myKernel, lr = learning_rate, beta1 = beta1, beta2 = beta2,
@@ -160,6 +172,8 @@ ace.train <- function(y, X, Z,
                                   norm.clip =  norm.clip, clip.at = clip.at)
   }
 
+
+  ### run
   stats = matrix(0, 2, maxiter + 2) #Evidence and RMSE
 
   ### write the loop in C++ at one point together with the optimizer initialization ?
@@ -183,6 +197,8 @@ ace.train <- function(y, X, Z,
   graphics::plot(stats[1, 3:(iter + 2)], type="l", ylab="training RMSE", xlab="Iteration")
   graphics::par(mfrow=c(1, 1))
 
+  #if(!missing(pi)) Z.intern <- (as.matrix(rlang::duplicate(Z)) - moments[2 + px, 1]) / moments[2 + px, 2]
+
   invisible(structure(list(Kernel = myKernel, Basis = myBasis, OptimSettings = list(optim = optimizer,
                                                                             lr = learning_rate,
                                                                             momentum = momentum,
@@ -191,6 +207,7 @@ ace.train <- function(y, X, Z,
                                                                             iter = iter),
                  moments = moments,
                  train_data = list(y = y, X = X.intern, Z = Z.intern, Zbinary = isbinary),
+                 RIC_bias_corrected = !missing(pi),
                  convergence = convergence.flag),
                  class = "ace"))
 }
