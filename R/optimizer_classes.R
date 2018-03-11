@@ -8,7 +8,7 @@ optAdam <- R6::R6Class("AdamOpt",
                            lr = 0.0001,
                            beta1 = 0.9,
                            beta2 = 0.999,
-                           norm.clip = TRUE,
+                           norm.clip = FALSE,
                            clip.at = 1,
                            initialize = function(KernelObj, lr, beta1, beta2, norm.clip, clip.at){
                              m <<- KernelObj$parameters*0
@@ -21,9 +21,7 @@ optAdam <- R6::R6Class("AdamOpt",
                            },
                            update = function(iter, parameters, gradients) {
 
-                             if (norm.clip) {
-                               gradients <- norm.clip(gradients, max.length = clip.at, type = "2")
-                             }
+                             norm_clip_cpp(norm.clip, gradients, clip.at)
 
                              if (Adam_cpp(iter, lr, beta1, beta2, 1e-8,
                                           m, v, gradients, parameters) == FALSE) {
@@ -42,7 +40,7 @@ optNadam <- R6::R6Class("NadamOpt",
                           lr = 0.0001,
                           beta1 = 0.9,
                           beta2 = 0.999,
-                          norm.clip = TRUE,
+                          norm.clip = FALSE,
                           clip.at = 1,
                           initialize = function(KernelObj, lr, beta1, beta2, norm.clip, clip.at){
                             m <<- KernelObj$parameters*0
