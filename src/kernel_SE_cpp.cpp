@@ -1,6 +1,6 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
-#include "ace_kernelutilities.hpp"
+#include "ace_kernel_utils.hpp"
 
 using namespace arma;
 using namespace Rcpp;
@@ -26,6 +26,7 @@ Rcpp::List kernmat_SE_cpp(const arma::mat& X1,
   //create the Euclidian distance metric:
   for(unsigned int i = 0; i < p; i++){ // for every element of x
     for(unsigned int r = 0; r < n1; r++){ //for every output row
+      Rcpp::checkUserInterrupt();
       tmprow = arma::pow(X1(r, i) - conv_to<arma::rowvec>::from(X2.col(i)), 2);
 
       for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
@@ -81,6 +82,7 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X,
   for(unsigned int i = 0; i < p; i++){ // for every element of x
     cnt = 0;
     for(unsigned int r = 0; r < n; r++){ //for every output row
+      Rcpp::checkUserInterrupt();
       for(unsigned int c = r; c < n; c++){
         tmp = pow(X(r, i) - X(c, i),2);
         for(unsigned int b = 0; b < B; b++){
@@ -96,6 +98,7 @@ Rcpp::List kernmat_SE_symmetric_cpp(const arma::mat& X,
   for(unsigned int b = 1; b < B; b++){
     cnt=0;
     for(unsigned int r = 0; r < n; r++){
+      Rcpp::checkUserInterrupt();
       //skip row if Z is zero, important for binary variables
       if (Z(r, b - 1) == 0) {
         tmpX.submat(cnt, b, cnt + (n-r) - 1, b).zeros();
@@ -172,6 +175,7 @@ inline arma::mat evid_scale_gradients(const arma::mat& X,
     }
     for(unsigned int b=0; b < B; b++){
       // replace parameter with its gradient
+      Rcpp::checkUserInterrupt();
       L[b + B*i] = evid_grad(Kaa, K.slice(b) % tmpX * exp( - L[b + B * i]));
                    // - length_scale_hyperparameter * sqrt(exp(L[b + B * i]));
                    // - 2 * exp(L[b + B * i]) * length_scale_hyperparameter
@@ -187,10 +191,10 @@ inline arma::mat evid_scale_gradients(const arma::mat& X,
 arma::vec grad_SE_cpp(const arma::vec& y,
                       const arma::mat& X,
                       const arma::mat& Z,
-                      arma::mat& Kfull,
-                      arma::cube& K,
-                      arma::mat& invKmatn,
-                      arma::vec& eigenval,
+                      const arma::mat& Kfull,
+                      const arma::cube& K,
+                      const arma::mat& invKmatn,
+                      const arma::vec& eigenval,
                       const arma::vec& parameters,
                       arma::vec& stats,
                       const unsigned int& B) {
@@ -216,7 +220,8 @@ arma::vec grad_SE_cpp(const arma::vec& y,
 
   // kernel-scale "lambda"
   for(unsigned int b=0; b<B; b++){
-    gradients[2+b] = 0.1 * evid_grad(tmpK, K.slice(b));
+    gradients[2+b] = evid_grad(tmpK, K.slice(b));
+    Rcpp::checkUserInterrupt();
   }
 
   // L

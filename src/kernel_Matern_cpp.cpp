@@ -1,6 +1,6 @@
 // [[Rcpp::depends("RcppArmadillo")]]
 #include <RcppArmadillo.h>
-#include "ace_kernelutilities.hpp"
+#include "ace_kernel_utils.hpp"
 
 using namespace arma;
 using namespace Rcpp;
@@ -65,6 +65,7 @@ Rcpp::List kernmat_Matern32_cpp(const arma::mat& X1,const arma::mat& X2,const ar
 
   for(unsigned int i = 0; i < p; i++){ // for every element of x
     for(unsigned int r = 0; r < n1; r++){ //for every output row
+      Rcpp::checkUserInterrupt();
       tmprow = arma::pow(X1(r,i) - conv_to<rowvec>::from(X2.col(i)), 2);
 
       for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
@@ -202,6 +203,7 @@ Rcpp::List kernmat_Matern32_symmetric_cpp(const arma::mat& X, const arma::mat& Z
   for(unsigned int i = 0; i < p; i++){ // for every element of x
     cnt = 0;
     for(unsigned int r = 0; r < n; r++){ //for every output row
+      Rcpp::checkUserInterrupt();
       for(unsigned int c = r; c < n; c++){
         tmp = pow(X(r,i) - X(c,i),2);
         for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
@@ -217,6 +219,7 @@ Rcpp::List kernmat_Matern32_symmetric_cpp(const arma::mat& X, const arma::mat& Z
   for(unsigned int b = 1; b < B; b++){
     cnt=0;
     for(unsigned int r = 0; r < n; r++){
+      Rcpp::checkUserInterrupt();
       if (Z(r,b-1)==0 ) { // need to increase counter by the number of upper-triangle elements we skip
         tmpX.submat(cnt,b,cnt+(n-r)-1,b).fill(0); cnt += n-r;
         continue; }
@@ -347,6 +350,7 @@ inline arma::mat evid_scale_Matern32_gradients(const arma::mat& X, const arma::m
 
   for(unsigned int i = 0; i < p; i++){ // for every element of x
     for(unsigned int r = 0; r < n; r++){ //for every output row
+      Rcpp::checkUserInterrupt();
       tmprow = arma::pow(X(r,i) - conv_to<rowvec>::from(X.col(i)), 2);
       for(unsigned int b = 0; b < B; b++){ //3rd dimension of array is called slice
         tmpX.slice(b).row(r) += tmprow * exp(- L[b + B*i]  );//L(i,b)
@@ -361,6 +365,7 @@ inline arma::mat evid_scale_Matern32_gradients(const arma::mat& X, const arma::m
 
   //tmpX.slice(b) = 0;
   for(unsigned int i=0; i < p; i++){
+    Rcpp::checkUserInterrupt();
     for(unsigned int r=0; r < n; r++){
       tmpX2.col(r) = pow(X(r, i) - X.col(i),2);
     }
@@ -436,6 +441,7 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
 
   //lambda
   for(unsigned int b=0;b<B;b++){
+    Rcpp::checkUserInterrupt();
     gradients[2+b] = evid_grad(tmpK, K.slice(b));
   }
 
