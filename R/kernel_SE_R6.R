@@ -42,7 +42,7 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
 
                                    if (iter==1) private$mean_solution(y) #overwrites mu gradient update
 
-                                   gradients <- grad_SE_cpp(y, X, Z),
+                                   gradients <- grad_SE_cpp(y, X, Z,
                                                             Kmat, Karray,
                                                             invKmatn, eigenval,
                                                             parameters, stats, B)
