@@ -10,11 +10,13 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
                                  Karray = NULL,
                                  B = NULL,
                                  p = NULL,
-                                 initialize = function(p_arg, B_arg, ext_init_parameters, verbose=FALSE) {
-                                     if (verbose) cat("Using SE kernel\n")
-                                     B <<- B_arg
-                                     p <<- p_arg
-                                     parameters <<- ext_init_parameters
+                                 stdy = 1,
+                                 initialize = function(p_arg, B_arg, ext_init_parameters, std_y_arg=1, verbose=FALSE) {
+                                   if (verbose) cat("Using SE kernel\n")
+                                   B <<- B_arg
+                                   p <<- p_arg
+                                   parameters <<- ext_init_parameters
+                                   stdy <<- std_y_arg# hand over moment for correct RMSE
                                  },
                                  kernel_mat = function(X1, X2, Z1, Z2) {
                                    #intended use for prediction
@@ -45,7 +47,7 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
                                    gradients <- grad_SE_cpp(y, X, Z,
                                                             Kmat, Karray,
                                                             invKmatn, eigenval,
-                                                            parameters, stats, B)
+                                                            parameters, stats, B, stdy)
 
                                    parameters <<- Optim$update(iter, parameters, gradients)
 
@@ -67,7 +69,7 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
 
                                    #private$mean_solution(y)
                                    stats <- stats_cpp(y, Kmat, invKmatList$inv,
-                                                      invKmatList$eigenval, c(parameters[2]))
+                                                      invKmatList$eigenval, c(parameters[2]), stdy)
 
                                  },
                                  predict = function(y, X, Z, X2, Z2, mean_y, std_y) {

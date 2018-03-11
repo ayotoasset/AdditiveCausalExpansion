@@ -10,11 +10,13 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                      Karray = NULL,
                                      B = NULL,
                                      p = NULL,
-                                     initialize = function(p_arg, B_arg, ext_init_parameters, verbose=FALSE) {
+                                     stdy = 1,
+                                     initialize = function(p_arg, B_arg, ext_init_parameters, std_y_arg=1, verbose=FALSE) {
                                        if (verbose) cat("Using Matérn 3/2 kernel\n")
                                        B <<- B_arg
                                        p <<- p_arg
                                        parameters <<- ext_init_parameters
+                                       stdy <<- std_y_arg# hand over moment for correct RMSE
                                      },
                                      kernel_mat = function(X1, X2, Z1, Z2) {
                                        # intended use for prediction
@@ -44,7 +46,7 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                        gradients <- grad_Matern_cpp(y, X, Z,
                                                                     Kmat, Karray,
                                                                     invKmatn, invKmatList$eigenval,
-                                                                    parameters, stats, B, 1)
+                                                                    parameters, stats, B, stdy)
                                        parameters <<- Optim$update(iter, parameters, gradients)
 
                                        mean_solution(y) # overwrites mu gradient update
@@ -63,7 +65,7 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                          invKmatList <- invkernel_cpp(Klist$full, c(parameters[1]))
                                        }
 
-                                       stats <- stats_cpp(y, Kmat, invKmatList$inv, invKmatList$eigenval, parameters[2])
+                                       stats <- stats_cpp(y, Kmat, invKmatList$inv, invKmatList$eigenval, parameters[2], stdy)
 
                                      },
                                      mean_solution = function(y) {
