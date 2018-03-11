@@ -1,5 +1,5 @@
-#ifndef ACE_KERNELUTILITIES_H
-#define ACE_KERNELUTILITIES_H
+#ifndef ACE_KERNEL_UTILITIES_H
+#define ACE_KERNEL_UTILITIES_H
 
 #include <RcppArmadillo.h>
 
