@@ -6,6 +6,7 @@ importFrom(methods, new)
 
 exportPattern(ace)
 exportPattern(ace.train)
+exportPattern(robust_treatment)
 S3method("predict", "ace")
 S3method("plot", "ace")
 
