@@ -88,21 +88,22 @@
 #'
 
 ace.train <- function(y, X, Z, pi,
-                      kernel          = "SE",
-                      basis           = "linear",
-                      n.knots         = 1,
-                      optimizer       = "Nadam",
-                      maxiter         = 1000,
-                      tol             = 1e-4,
-                      learning_rate   = 0.01,
-                      beta1           = 0.9,
-                      beta2           = 0.999,
-                      momentum        = 0.0,
-                      norm.clip       = (optimizer!="Nadam") | (optimizer!="Adam")  ,
-                      clip.at         = 1,
-                      init_parameters = set_initial_parameters(px, myBasis$dim(), n, y, Z)) {
-
-
+                      kernel            = "SE",
+                      basis             = "linear",
+                      n.knots           = 1,
+                      optimizer         = "Nadam",
+                      maxiter           = 1000,
+                      tol               = 1e-4,
+                      learning_rate     = 0.01,
+                      beta1             = 0.9,
+                      beta2             = 0.999,
+                      momentum          = 0.0,
+                      norm.clip         = (optimizer != "Nadam") | (optimizer != "Adam")  ,
+                      clip.at           = 1,
+                      init.sigma        = NULL, #Default:
+                      init.length_scale = 20, #gives a roughly linear model (-> infty)
+                      plot_stats        = TRUE,
+                      verbose=TRUE) {
 
   if (is.factor(y)) stop("y is not numeric. This package does not support classification tasks.")
 
@@ -110,7 +111,7 @@ ace.train <- function(y, X, Z, pi,
   px <- ncol(X)
   y  <- matrix(y)
 
-  if (is.factor(Z)) Z <- (as.numeric(Z)-1)
+  if (is.factor(Z)) Z <- (as.numeric(Z) - 1)
 
   # create manual copy of variable since calling cpp functions with reference for normalization
   Z.intern <- as.matrix(rlang::duplicate(Z))
@@ -136,9 +137,9 @@ ace.train <- function(y, X, Z, pi,
   #check whether Z is binary
   isbinary <- (moments[(2 + px):(1 + pz + px), 3] == 1)
   if (all(isbinary)) {
-    cat("Assuming binary Z\n")
+    if (verbose) cat("Assuming binary Z\n")
     if (missing(pi)) basis <- "binary"
-  } else cat("Non-Binary Z detected\n")
+  } else if (verbose) cat("Non-Binary Z detected\n")
 
   if (!missing(pi) && isuniv) {
     pi.intern <- as.matrix(rlang::duplicate(pi))
@@ -148,54 +149,50 @@ ace.train <- function(y, X, Z, pi,
   }
 
   #### select chosen spline or appropriate based on data ###
-  if ( (basis == "binary") || (basis == "linear")) myBasis <- linear_spline$new()
-  else if (isuniv && (basis == "B")) myBasis <- B_spline$new()
-  else if (isuniv && (basis == "square")) myBasis <- square_spline$new()
-  else if (isuniv && (basis == "cubic")) myBasis <- ns_spline$new()
-  else if (isuniv) myBasis <- ns_spline$new()
+  myBasis <- set_basis(basis, isuniv)
+  # generate basis
+  myBasis$trainbasis(Z.intern, n.knots, verbose) #binary "spline" discards n_knots
 
-  #generate basis
-  myBasis$trainbasis(Z.intern, n.knots) #binary "spline" discards n_knots
-
+  #Set kernel parameters
+  init_parameters = set_initial_parameters(px, myBasis$dim(), n,
+                                           y, X.intern, Z.intern,
+                                           init.sigma = init.sigma, init.length_scale = init.length_scale,
+                                           verbose = verbose)
   #Gaussian Process kernel (only SE and Matern so far)
-  if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(px, myBasis$dim(), init_parameters)
-  else                      myKernel <- KernelClass_SE_R6$new(px, myBasis$dim(), init_parameters)
+  if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(px, myBasis$dim(), init_parameters, verbose)
+  else                      myKernel <- KernelClass_SE_R6$new(px, myBasis$dim(), init_parameters, verbose)
 
   #initialize optimizer
-  if (optimizer=="Adam") myOptimizer = optAdam$new(myKernel, lr = learning_rate, beta1 = beta1, beta2 = beta2,
-                                                   norm.clip =  norm.clip, clip.at = clip.at)
-  else if (optimizer=="Nadam") myOptimizer = optNadam$new(myKernel, lr = learning_rate, beta1 = beta1, beta2 = beta2,
-                                                          norm.clip =  norm.clip, clip.at = clip.at)
-  else if (optimizer == "GD" || optimizer=="Nesterov") {
-    if(optimizer == "GD") momentum = 0.0
-    myOptimizer = optNesterov$new(myKernel, lr = learning_rate, momentum = momentum,
-                                  norm.clip =  norm.clip, clip.at = clip.at)
-  }
+  myOptimizer <- set_optimizer(optimizer, myKernel, learning_rate = learning_rate, momentum,
+                               beta1 = beta1, beta2 = beta2,
+                               norm.clip =  norm.clip, clip.at = clip.at)
 
+  ### run iterations:
+  stats <- matrix(0, 2, maxiter + 2) #Evidence and RMSE
 
-  ### run
-  stats = matrix(0, 2, maxiter + 2) #Evidence and RMSE
-
-  ### write the loop in C++ at one point together with the optimizer initialization ?
   for(iter in 1:maxiter){
-    stats[, iter+1] = myKernel$para_update(iter, y, X.intern, myBasis$B, myOptimizer)
+    stats[, iter + 1] <- myKernel$para_update(iter, y, X.intern, myBasis$B, myOptimizer, verbose=verbose)
+
+    # prints it correctly:
+    #stats[, iter + 1] <- myKernel$get_train_stats(y, X.intern, myBasis$B)
 
     change = abs(stats[2, iter + 1] - stats[2, iter])
     if ((change < tol) && (iter > 3)) {
-      cat( sprintf("Stopped: change smaller than tolerance after %d iterations\n",
-                   iter))
+      if (verbose) cat(sprintf("Stopped: change smaller than tolerance after %d iterations\n",
+                               iter))
       break
-      }
+    }
   }
-  convergence.flag = (iter < maxiter)
-  if(!convergence.flag) cat("Optimization stopped: maximum iterations reached\n")
+  convergence.flag <- (iter < maxiter)
 
-  stats[, iter+2] = myKernel$get_train_stats(y, X.intern, myBasis$B)
+  stats[, iter + 2] <- myKernel$get_train_stats(y, X.intern, myBasis$B)
 
-  graphics::par(mfrow=c(1, 2))
-  graphics::plot(stats[2, 3:(iter + 2)], type="l", ylab="log Evidence", xlab="Iteration")
-  graphics::plot(stats[1, 3:(iter + 2)], type="l", ylab="training RMSE", xlab="Iteration")
-  graphics::par(mfrow=c(1, 1))
+  if (verbose) if(!convergence.flag) cat("WARNING NO CONVERGENCE - Optimization stopped: maximum iterations reached\n")
+  if (verbose) cat("Final training log Evidence: ", stats[2, iter + 2], "\n")
+
+  stats <- stats[, 3:(iter + 2)]
+
+  if (plot_stats) plot_train_stats(stats)
 
   #if(!missing(pi)) Z.intern <- (as.matrix(rlang::duplicate(Z)) - moments[2 + px, 1]) / moments[2 + px, 2]
 
@@ -203,12 +200,13 @@ ace.train <- function(y, X, Z, pi,
                                                                             lr = learning_rate,
                                                                             momentum = momentum,
                                                                             beta1 = beta1,
-                                                                            beta2 = beta2,
-                                                                            iter = iter),
-                 moments = moments,
-                 train_data = list(y = y, X = X.intern, Z = Z.intern, Zbinary = isbinary),
-                 RIC_bias_corrected = !missing(pi),
-                 convergence = convergence.flag),
+                                                                            beta2 = beta2),
+                           moments = moments,
+                           train_data = list(y = y, X = X.intern, Z = as.matrix(Z.intern), Zbinary = isbinary),
+                           train_stats = list(RIC_bias_corrected = !missing(pi),
+                                              init.length_scale = init.length_scale,
+                                              convergence = convergence.flag,
+                                              final_evidence = tail(stats[2,], n=1) )),
                  class = "ace"))
 }
 

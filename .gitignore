@@ -1,4 +1,20 @@
+#ignore files explicitely
+xgboost.model
+todo
 .Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+src/RcppExports.cpp
+
+#ignore folders
+archive/
+benchmark/
+
+
+
+#ignore files by ending
+#  compiled cpp code
+*.o
+#  R environments
+*.RData
