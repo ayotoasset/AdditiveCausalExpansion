@@ -14,8 +14,8 @@ set_initial_parameters <- function(p, B, n, y, X, Z, init.sigma, init.length_sca
   if (verbose) cat("Initial noise variance: ", exp(init.sigma), "\n")
   parameters <- matrix(c(init.sigma, #sigma
                          0, # mu
-                         -log(rep(1, ncol(Z) + 1)),# kernel-scales
-                         log(rep(init.length_scale, B*p)) # ARD length-scales
+                         -log(rep(1, B)),# kernel-scales
+                         log(rep(init.length_scale, B * p)) # ARD length-scales
                          )
                        )
 
