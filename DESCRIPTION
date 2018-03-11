@@ -14,15 +14,16 @@ BugReports: https://github.com/mazphilip/AdditiveCausalExpansion/issues
 URL: https://github.com/mazphilip/AdditiveCausalExpansion
 Encoding: UTF-8
 LazyData: true 
-Depends: R (>= 3.3.1)
+Depends: R
 Imports: methods,
          Rcpp (>= 0.12.12),
-         splines2 (>= 0.2.6),
-         Formula (>= 1.2),
-         rlang (>= 0.1.6),
+         splines2,
+         Formula,
+         rlang,
          R6
-Suggests: plotly (>= 4.7),
-          ggplot2 (>= 2.2.1)
+Suggests: plotly,
+          ggplot2
 LinkingTo: Rcpp, RcppArmadillo (>= 0.8.200.0)
 RoxygenNote: 6.0.1
+NeedsCompilation: yes
 
