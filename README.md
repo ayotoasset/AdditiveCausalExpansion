@@ -4,7 +4,7 @@ This is a package for a varying-coefficient regression with Gaussian process pri
 ## Installation
 It can be installed using (requires appropriate c++ compilers, see the documentation of ```Rcpp```):
 ```
-install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/ace_0.3.0.tar.gz", repos = NULL, type = "source")
+install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/ace_0.4.0.tar.gz", repos = NULL, type = "source")
 ```
 
 ## Theory
@@ -25,6 +25,7 @@ This constitutes a proper covariance Mercer kernel (sum of a product of kernels)
 ## Example
 ```
 library(ace)
+# generate data
 set.seed(1234)
 n2 <- 300
 df <- data.frame(x = runif(n2, min = 1, max = 2))
@@ -35,22 +36,23 @@ y_truefun <- function(x, z) {
 }
 y2_true <- y_truefun(df[, c("x", "x2")], df$z)
 df$y <- rnorm(n2, mean = y2_true, sd = 1)
-my.GPS <- ace(y ~ x + x2 | z, data = df, 
-              spline = "B", n.knots = 6,
-              myoptim = "GD", learning_rate = 0.0001)
-my.pred <- predict(my.GPS)
+# train model
+my.ace <- ace(y ~ x + x2 | z, data = df, kernel="SE",
+              basis = "cubic", n.knots = 2,
+              optim = "Nadam", learning_rate = 0.01)
+my.pred <- predict(my.ace)
 plot(df$y, my.pred$map)
 abline(0, 1, lty = 2)
-#prediction of the curve as contour
-plot(my.GPS, "x2", show.observations = TRUE)
-#prediction of the curve in 3D
-plot(my.GPS, "x2", plot3D = TRUE, show.observations = TRUE)
+# prediction of the curve as contour
+plot(my.ace, "x2", show.observations = TRUE)
+# prediction of the curve in 3D if plotly installed
+plot(my.ace, "x2", plot3D = TRUE, show.observations = TRUE)
 
 #difference to the true marginal curve
 marg_truefun <- function(x, z) {
     as.matrix(sqrt(x[, 1]) + x[, 2] * 3 * (2 * (z + 8) - 2))
 }
-plot(my.GPS, "x2", marginal = TRUE, show.observations = TRUE, truefun = marg_truefun)
+plot(my.ace, "x2", marginal = TRUE, show.observations = TRUE, truefun = marg_truefun)
 ```
 
 ![](example/readme.png)
