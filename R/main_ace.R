@@ -159,8 +159,8 @@ ace.train <- function(y, X, Z, pi,
                                            init.sigma = init.sigma, init.length_scale = init.length_scale,
                                            verbose = verbose)
   #Gaussian Process kernel (only SE and Matern so far)
-  if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(px, myBasis$dim(), init_parameters, verbose)
-  else                      myKernel <- KernelClass_SE_R6$new(px, myBasis$dim(), init_parameters, verbose)
+  if (kernel == "Matern32") myKernel <- KernelClass_Matern32_R6$new(px, myBasis$dim(), init_parameters, moments[1,2], verbose)
+  else                      myKernel <- KernelClass_SE_R6$new(px, myBasis$dim(), init_parameters, moments[1,2], verbose)
 
   #initialize optimizer
   myOptimizer <- set_optimizer(optimizer, myKernel, learning_rate = learning_rate, momentum,
