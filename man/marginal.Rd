@@ -4,7 +4,7 @@
 \alias{marginal}
 \title{Predict the the marginal response surface wrt Z using the Gaussian process fit.}
 \usage{
-marginal(object, newX, newZ, causal = FALSE)
+marginal(object, newX, newZ, causal = FALSE, ...)
 }
 \arguments{
 \item{object}{An "ace" object from the GPspline function}

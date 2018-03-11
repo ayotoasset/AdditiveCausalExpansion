@@ -4,7 +4,8 @@
 \alias{predict.ace}
 \title{Predict the the response surface and the marginal response wrt Z using the Gaussian process fit.}
 \usage{
-\method{predict}{ace}(object, newX, newZ, marginal = FALSE, causal = FALSE)
+\method{predict}{ace}(object, newX, newZ, marginal = FALSE, causal = FALSE,
+  normalize = TRUE)
 }
 \arguments{
 \item{object}{An "ace" object from the ace}

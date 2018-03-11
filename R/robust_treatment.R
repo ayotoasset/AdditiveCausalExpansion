@@ -1,3 +1,15 @@
+#' Calculate robust average treatment effect using posterior uncertainty
+#'
+#' @param X The covariates used in the causal regression.
+#'
+#' @return A trained causal forest object.
+#'
+#' @examples \dontrun{
+#'
+#' }
+#'
+#' @export
+
 robust_treatment <- function(object, newX, n.steps = 10) {
   if(!object$train_data$Zbinary) {
     stop("Average treatment effect requires bianry treatment indicator.")

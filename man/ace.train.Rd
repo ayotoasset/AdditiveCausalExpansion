@@ -4,10 +4,12 @@
 \alias{ace.train}
 \title{Fit a VCM basis model with Gaussian process priors on the coefficients}
 \usage{
-ace.train(y, X, Z, kernel = "SE", basis = "linear", n.knots = 1,
+ace.train(y, X, Z, pi, kernel = "SE", basis = "linear", n.knots = 1,
   optimizer = "Nadam", maxiter = 1000, tol = 1e-04,
   learning_rate = 0.01, beta1 = 0.9, beta2 = 0.999, momentum = 0,
-  norm.clip = TRUE, clip.at = 1)
+  norm.clip = (optimizer != "Nadam") | (optimizer != "Adam"), clip.at = 1,
+  init.sigma = NULL, init.length_scale = 20, plot_stats = TRUE,
+  verbose = TRUE)
 }
 \arguments{
 \item{y}{A numeric vector}
@@ -48,17 +50,19 @@ Fit a VCM basis model with Gaussian process priors on the coefficients
 # Generate data
 library(ace)
 set.seed(1231)
-n <- 120
+n <- 300
 Z <- rbinom(n, 1, 0.3)
 X1 <- rnorm(sum(Z), mean = 30,sd = 10)
 X0 <- rnorm(n-sum(Z), mean = 20, sd = 10)
+X2 <- runif(n)
 X <- matrix(NaN, n, 1)
 X[Z==1, ] <- X1
 X[Z==0, ] <- X0
-sort.idx <- sort(X, index.return = TRUE)$ix
+X <- data.frame(X, X2)
+sort.idx <- sort(X[,1], index.return = TRUE)$ix
 y_truefun <- function(x,z) {
-    mat0 <- matrix(72 + 3 * (x[z == 0,] > 0) * sqrt(abs(x[z == 0, ])), sum(z == 0), 1)
-    mat1 <- matrix(90 + exp(0.06 * x[z == 1, ]), sum(z == 1), 1)
+    mat0 <- matrix(72 + 3 * (x[z == 0,1] > 0) * sqrt(abs(x[z == 0,1])), sum(z == 0), 1)
+    mat1 <- matrix(90 + exp(0.06 * x[z == 1,2]), sum(z == 1), 1)
     mat <- matrix(NaN, length(z), 1)
     mat[z==0, 1] <- mat0
     mat[z==1, 1] <- mat1
@@ -69,15 +73,18 @@ y1_true <- y_truefun(X, rep(1, n))
 Y0 <- rnorm(n, mean = y0_true, sd = 1)
 Y1 <- rnorm(n, mean = y1_true, sd = 1)
 Y <- Y0 * (1-Z) + Y1 * Z
+pihatz = nnet(X, Z, size=10)$fitted.values
 # train model:
-my.GPS <- ace.train(Y, X, Z, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
+my.GPS <- ace.train(Y, X, Z, pi = pihatz, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
 # print (sample) average treatment effect (ATE)
-predict(my.GPS, marginal = TRUE, causal = TRUE)$ate$map
-predict(my.GPS, marginal = TRUE, causal = TRUE)$att$map
+predict(my.GPS, marginal = TRUE, causal = TRUE)$ate
+predict(my.GPS, marginal = TRUE, causal = TRUE)$att
+robust_treatment(my.GPS)
+abline(a=mean(y1_true - y0_true), b=0)
 #true ATE
 mean(y1_true - y0_true)
 # plot response curves
-plot(my.GPS, 1, marginal = FALSE, truefun = y_truefun)
+plot(my.GPS, 1, marginal = TRUE)
 # plot treatment curve
 treat_truefun <- function(x) {y_truefun(x, rep(1, nrow(x))) - y_truefun(x, rep(0, nrow(x)))}
 plot(my.GPS, 1, marginal = TRUE, truefun = treat_truefun)
