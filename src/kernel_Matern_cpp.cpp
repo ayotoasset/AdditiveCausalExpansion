@@ -417,10 +417,16 @@ inline arma::mat evid_scale_Matern12_gradients(const arma::mat& X, const arma::m
 
 // reduced to only an output list due to specification of the optimizers
 // [[Rcpp::export]]
-arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::mat& Z,
-                            arma::mat& Kfull, arma::cube& K, arma::mat& invKmatn, arma::vec& eigenval,
-                            const arma::vec& parameters,
-                            arma::vec& stats, const unsigned int& B,unsigned int rho) {
+arma::vec grad_Matern_cpp(const arma::vec& y,
+                          const arma::mat& X,
+                          const arma::mat& Z,
+                          arma::mat& Kfull, arma::cube& K,
+                          arma::mat& invKmatn,
+                          arma::vec& eigenval,
+                          const arma::vec& parameters,
+                          arma::vec& stats,
+                          const unsigned int& B,
+                          double std_y) {
 
   unsigned int n = X.n_rows;
   unsigned int px = X.n_cols;
@@ -440,43 +446,22 @@ arma::vec grad_Matern_cpp(const arma::vec& y, const arma::mat& X, const arma::ma
   gradients[0] = sigma_gradient(tmpK, parameters[0]);
 
   //lambda
-  for(unsigned int b=0;b<B;b++){
+  for(unsigned int b = 0; b < B; b++){
     Rcpp::checkUserInterrupt();
     gradients[2+b] = evid_grad(tmpK, K.slice(b));
   }
 
   //L
-  /*
-  switch(rho){
-    /case 0: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern12_gradients(X, tmpK, K,
-                                                 parameters.rows(2+B,1+B*(px+1)), B);
-      break;
-    case 1: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern32_gradients(X, tmpK, K,
-                                                 parameters.rows(2+B,1+B*(px+1)), B);
-      break;
-    case 2: gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern52_gradients(X, Z, tmpK, K,
-                              parameters.rows(2+B,1+B*(px+1)), parameters.rows(2,1+B), B);
-  }
-  */
-  gradients.rows(2+B,1+B*(px+1)) = evid_scale_Matern32_gradients(X, tmpK, K, parameters.rows(2+B,1+B*(px+1)), B);
+  gradients.rows(2 + B, 1 + B * (px + 1)) = evid_scale_Matern32_gradients(X, tmpK, K, parameters.rows(2 + B, 1 + B * (px + 1)), B);
 
   //mu - gradient approach
   gradients[1]=0; //arma::sum( invKmatn * ybar )
 
   //RMSE
-  stats(0) = pow(arma::norm(ybar - (Kfull * alpha)),2);
+  stats(0) = std_y * arma::norm(ybar - (Kfull * alpha)) / sqrt(n);
   //Evidence
   stats(1) = logevidence(y, alpha, eigenval, n);
   //stats is returned as a reference
 
-  //clip gradients
-  //umat idx=(gradients>20);
-  /*for(unsigned int g=0; g<gradients.size();g++){
-    if(gradients(g)>20){
-      gradients.row(g) = 20;
-    } else if(gradients(g)<-20) {
-      gradients.row(g) = -20;
-    }
-  }*/
   return gradients;
 }

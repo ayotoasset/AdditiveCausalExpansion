@@ -169,14 +169,15 @@ inline arma::mat evid_scale_gradients(const arma::mat& X,
   unsigned int p = X.n_cols;
   arma::mat tmpX(n, n);
 
-  for(unsigned int i=0; i < p; i++){
-    for(unsigned int r=0; r < n; r++){
+  for(unsigned int i = 0; i < p; i++){
+    for(unsigned int r = 0; r < n; r++){
       tmpX.col(r) = pow(X(r, i) - X.col(i), 2);
     }
-    for(unsigned int b=0; b < B; b++){
+    for(unsigned int b = 0; b < B; b++){
       // replace parameter with its gradient
       Rcpp::checkUserInterrupt();
-      L[b + B*i] = evid_grad(Kaa, K.slice(b) % tmpX * exp( - L[b + B * i]));
+      L[b + B * i] = evid_grad(Kaa, K.slice(b) % tmpX * exp( - L[b + B * i]));
+
                    // - length_scale_hyperparameter * sqrt(exp(L[b + B * i]));
                    // - 2 * exp(L[b + B * i]) * length_scale_hyperparameter
                    // / (1 + L[b + B*i] * length_scale_hyperparameter);
@@ -197,7 +198,8 @@ arma::vec grad_SE_cpp(const arma::vec& y,
                       const arma::vec& eigenval,
                       const arma::vec& parameters,
                       arma::vec& stats,
-                      const unsigned int& B) {
+                      const unsigned int& B,
+                      double std_y) {
   // set constants
   unsigned int n = X.n_rows;
   unsigned int px = X.n_cols;
@@ -227,13 +229,13 @@ arma::vec grad_SE_cpp(const arma::vec& y,
   // L
   gradients.rows(2 + B, 1 + B * (px + 1)) = evid_scale_gradients(X,
                  tmpK, K, parameters.rows(2 + B, 1 + B * (px + 1)), B);
-
+  //Rcpp::Rcout << ""
   // mu - gradient approach
   gradients[1] = arma::sum(invKmatn * ybar);
 
   // stats is returned as a reference
   //RMSE
-  stats(0) = pow(arma::norm(ybar - (Kfull * alpha)), 2);
+  stats(0) = std_y * arma::norm(ybar - (Kfull * alpha)) / sqrt(n);
   //Evidence
   stats(1) = logevidence(y, alpha, eigenval, n);
 

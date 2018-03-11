@@ -10,7 +10,8 @@ arma::rowvec stats_cpp(const arma::colvec& y,
                        const arma::mat& Kmat,
                        const arma::mat& invKmatn,
                        const arma::vec& eigenval,
-                       const double mu) {
+                       const double mu,
+                       double std_y = 1) {
   //Rcpp::List gradients = clone(parameters); //for the same list structure
 
   unsigned int n = y.n_rows;
@@ -22,7 +23,8 @@ arma::rowvec stats_cpp(const arma::colvec& y,
   alpha = invKmatn * ybar;
 
   //RMSE
-  stats(0) = pow(arma::norm(ybar - (Kmat * alpha)),2);
+  stats(0) = std_y * arma::norm(ybar - (Kmat * alpha)) / sqrt(n);
+
   //Evidence
   stats(1) = logevidence(y, alpha, eigenval, n);
 
