@@ -6,6 +6,16 @@ It can be installed using (requires appropriate c++ compilers, see the documenta
 ```
 install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/ace_0.4.0.tar.gz", repos = NULL, type = "source")
 ```
+### Platforms
+Generally, need to verify that Lapack and Arpack libraries are installed (required by Armadillo):
+- Mac OS: Requires Lapack and Arpack with non-system gcc compiler
+- Ubuntu 16.04: Requires manual installation of Arpack (and Lapack if not already installed)
+```
+sudo apt-get install libarpack2-dev libarpack++2-dev
+sudo apt-get install liblapack-dev libblas-dev libatlas-base-dev 
+```
+* AWS Linux (RHEL 7+ & Fedora 19+): Needs more testing
+* Windows: Requires ```Rtools``` and manual installation of [Lapack](https://gcc.gnu.org/wiki/LAPACK%20on%20Windows) & [Arpack](http://www-bcf.usc.edu/~jbarbic/arpack.html) for MINGW (not fully tested)
 
 ## Theory
 The intended use case is a (for now) single dimensional set of a continuous variable Z whose marginal causal effect we are interested in. The other set, the control/confounding variables X are used to adjust for the confounding (see Pearl . Using Gaussian processes, we can use differentiable spline bases to obtain the marginal effect. 
