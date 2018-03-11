@@ -24,34 +24,36 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
                                  kernel_mat_sym = function(X, Z) {
                                    #intended use for the gradient step
                                    Klist <- kernmat_SE_symmetric_cpp(X, Z, parameters)
-                                   #kernmat_SE_cpp(X,X,Z,Z,parameters)
                                    Kmat <<- Klist$full
                                    Karray <<- Klist$elements
-                                   Klist
+                                   invisible(Klist)
                                  },
                                  getinv_kernel = function(X, Z) {
                                    # get matrices and return inverse for prediction
                                    kernel_mat_sym(X, Z)
                                    invKmatList <- invkernel_cpp(Kmat, c(parameters[1])) #no error handling
                                    invKmatn <<- invKmatList$inv
-                                   invKmatList
+                                   invisible(invKmatList)
                                  },
                                  para_update = function(iter, y, X, Z, Optim, printevery=100, verbose=TRUE) {
                                    #update Kmat and invKmat in the class environment
                                    stats <- c(0, 0)
-                                   invKmatList <- getinv_kernel(X, Z);
+                                   eigenval <- getinv_kernel(X, Z)$eigenval;
 
-                                   gradients <- grad_SE_cpp(y, X, Z,
+                                   if (iter==1) private$mean_solution(y) #overwrites mu gradient update
+
+                                   gradients <- grad_SE_cpp(y, X, Z),
                                                             Kmat, Karray,
-                                                            invKmatn, invKmatList$eigenval,
+                                                            invKmatn, eigenval,
                                                             parameters, stats, B)
+
                                    parameters <<- Optim$update(iter, parameters, gradients)
 
-                                   private$mean_solution(y) #overwrites mu gradient update
+                                   private$mean_solution(y)
 
                                    if ((iter %% printevery == 0)  && verbose) {
-                                     cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n",
-                                                 iter, stats[2], stats[1]))
+                                     cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f | Norm. noise var: %3.4f | Gradient L2: %3.4f\n",
+                                                 iter, stats[2], stats[1], exp(parameters[1]), norm(gradients)))
                                    }
 
                                    invisible(stats)
@@ -63,8 +65,9 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
                                      invKmatList <- invkernel_cpp(Klist$full, c(parameters[1]))
                                    }
 
+                                   #private$mean_solution(y)
                                    stats <- stats_cpp(y, Kmat, invKmatList$inv,
-                                                      invKmatList$eigenval, parameters[2])
+                                                      invKmatList$eigenval, c(parameters[2]))
 
                                  },
                                  predict = function(y, X, Z, X2, Z2, mean_y, std_y) {

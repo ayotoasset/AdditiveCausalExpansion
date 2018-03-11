@@ -9,6 +9,6 @@
 
 #' @return Returns the MAP and the 95 percent credible interval of the fitted process as a list.
 
-marginal <- function(object, newX, newZ, causal = FALSE){
-  predict(object, newX, newZ, marginal = TRUE, causal = causal)
+marginal <- function(object, newX, newZ, causal = FALSE, ...){
+  ace::predict.ace(object, newX, newZ, marginal = TRUE, causal = causal, ...)
 }

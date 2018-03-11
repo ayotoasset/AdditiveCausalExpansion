@@ -39,6 +39,8 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                        stats <- c(0,0)
                                        invKmatList <- getinv_kernel(X,Z);
 
+                                       if (iter==1) mean_solution(y)
+
                                        gradients <- grad_Matern_cpp(y, X, Z,
                                                                     Kmat, Karray,
                                                                     invKmatn, invKmatList$eigenval,
@@ -48,8 +50,8 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                        mean_solution(y) # overwrites mu gradient update
 
                                        if ((iter %% printevery == 0)  && verbose) {
-                                         cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f \n",
-                                                     iter, stats[2], stats[1]))
+                                         cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f | Norm noise var: %3.4f\n",
+                                                     iter, stats[2], stats[1], exp(parameters[1])))
                                        }
 
                                        stats
@@ -57,7 +59,7 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                      get_train_stats = function(y, X, Z, invKmatList) {
                                        if(missing(invKmatList)){
                                          # do not update the inverse
-                                         Klist = kernel_mat_sym(X, Z)
+                                         Klist <- kernel_mat_sym(X, Z)
                                          invKmatList <- invkernel_cpp(Klist$full, c(parameters[1]))
                                        }
 
