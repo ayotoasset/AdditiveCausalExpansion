@@ -1,4 +1,4 @@
 ## Default Rcpp:
-#CXX_STD = CXX03
+CXX_STD = CXX03
 
 PKG_CXXFLAGS = -I"../src/include/" -I"../src/"
