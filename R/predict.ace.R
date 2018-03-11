@@ -11,6 +11,8 @@
 
 predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, normalize = TRUE){
   isbinary <- object$train_data$Zbinary
+  px <- ncol(object$train_data$X)
+  pz <- ncol(object$train_data$Z)
   #this function returns the prediction for the fitted Gaussian process
 
   if (missing(newX) && missing(newZ)){
@@ -22,10 +24,10 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, no
   } else if (missing(newX) && !missing(newZ)){
     newX.intern <- as.matrix(rlang::duplicate(object$train_data$X)) #normalized
 
-    if (length(newZ) == 1) newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
+    if (length(newZ) == 1) newZ.intern <- matrix(rep(as.numeric(newZ.intern), nrow(newX.intern)), nrow(newX.intern), 1)
     else {
       #normalize the non-binary variables
-      newZ.intern <- as.matrix(rlang::duplicate(newZ))
+      newZ.intern <- as.matrix(as.numeric(rlang::duplicate(newZ)))
       if(normalize) normalize_test(newX.intern, newZ.intern, object$moments)
       newX.intern <- object$train_data$X
     }
@@ -38,12 +40,14 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, no
     #normalize the non-binary variables
     if(normalize) normalize_test(newX.intern, newZ.intern, object$moments)
 
+    newZ.intern <- matrix(rep(0, nrow(newX.intern)), nrow(newX.intern), 1)
+
   }  else if (!missing(newX) && !missing(newZ)) {
     newX.intern <- as.matrix(rlang::duplicate(newX))
     newZ.intern <- as.matrix(rlang::duplicate(newZ))
 
     if (ncol(newX.intern) != ncol(object$train_data$X)) stop("Dimension mismatch of X with newX", call. = FALSE)
-    if ((ncol(newZ.intern) != ncol(object$train_data$Z)) && (length(newZ) != 1)) stop("Dimension mismatch of Z with newZ", call. = FALSE)
+    #if ((ncol(newZ.intern) != ncol(object$train_data$Z)) && (length(newZ) != 1)) stop("Dimension mismatch of Z with newZ", call. = FALSE)
     if (length(newZ) == 1) newZ.intern <- matrix(rep(newZ.intern, nrow(newX.intern)), nrow(newX.intern), 1)
 
     #normalize the non-binary variables
@@ -70,7 +74,7 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, no
                                                 dZ2 = test.basis$dB,
                                                 mean_y = object$moments[1, 1],
                                                 std_y = object$moments[1, 2],
-                                                std_Z = object$moments[dim(object$moments)[1], 2],
+                                                std_Z = object$moments[(2 + px):(1 + px + pz), 2],
                                                 calculate_ate = (isbinary && causal))
   }
   invisible(pred_list)
