@@ -2,25 +2,45 @@
 % Please edit documentation in R/predict.ace.R
 \name{predict.ace}
 \alias{predict.ace}
-\title{Predict the the response surface and the marginal response wrt Z using the Gaussian process fit.}
+\title{Prediction of a fitted Additive Causal Expansion model}
 \usage{
-\method{predict}{ace}(object, newX, newZ, marginal = FALSE, causal = FALSE,
-  normalize = TRUE)
+\method{predict}{ace}(object, newX, newZ, marginal = FALSE,
+  return_average_treatments = FALSE, normalize = TRUE, ...)
 }
 \arguments{
-\item{object}{An "ace" object from the ace}
+\item{object}{An "ace" object returned from the ace.train function.}
 
-\item{newX}{A matrix with new data. If not presented, using the training data.}
+\item{newX}{(Optional) A matrix with new data. Using the training data if missing.}
 
-\item{newZ}{A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.}
+\item{newZ}{(Optional) A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.}
 
-\item{marginal}{A logical}
+\item{marginal}{Logical flag that determines whether to predict the response surface (FALSE) or the marginal response surface/heterogeneous treatment effect (TRUE) (default: FALSE).}
 
-\item{causal}{logical}
+\item{return_average_treatments}{Logical flag that determines whether treatment effect averages (ATE, ATT, ATU) are returned (default: False). Ignored if \code{marginal + FALSE}}
+
+\item{normalize}{For internal use (default: True). A logical scalar that determines whether new data is normalized using training moments.}
+
+\item{...}{Ignored.}
 }
 \value{
-Returns the MAP and the 95 percent credible interval of the fitted process as a list.
+{
+For the estimate of the response surface (\code{marginal = FALSE}) or marginal response (\code{marginal = TRUE}), the method returns a list with
+\itemize{
+\itemize{
+\item Maximum a priori (\code{map}) estimate (here: mean)
+\item 95 percent credible interval (\code{ci}) for each prediction point
+\item Posterior variance (\code{var}) for each prediction point
+\item If \code{marginal = TRUE} and \code{return_average_treatments = TRUE}:
+\itemize{
+\item (Sample) Average Treatment Effect: \code{ate} with \code{map}, \code{ci}, and \code{var}
+\item (Sample) Average Treatment effect of the Treated: \code{att} with \code{map}, \code{ci}, and \code{var}
+\item (Sample) Average Treatment effect of the Untreated: \code{atu} with \code{map}, \code{ci}, and \code{var}
+}
+}
+}
+}
 }
 \description{
-Predict the the response surface and the marginal response wrt Z using the Gaussian process fit.
+Predict the the response surface and the marginal response with respect to the treatment using a fitted "ace" model.
+In case of binary treatments, the marginal response surface is the (heterogeneous) treatment effect. Optionally, the average treatment effect that takes into account all covariances of the posterior can be returned.
 }

@@ -2,118 +2,163 @@
 % Please edit documentation in R/main_ace.R
 \name{ace.train}
 \alias{ace.train}
-\title{Fit a VCM basis model with Gaussian process priors on the coefficients}
+\title{Fit an Additive Causal Expansion model}
 \usage{
 ace.train(y, X, Z, pi, kernel = "SE", basis = "linear", n.knots = 1,
   optimizer = "Nadam", maxiter = 1000, tol = 1e-04,
   learning_rate = 0.01, beta1 = 0.9, beta2 = 0.999, momentum = 0,
-  norm.clip = (optimizer != "Nadam") | (optimizer != "Adam"), clip.at = 1,
+  norm.clip = (optimizer \%in\% c("Adam", "Nadam")), clip.at = 1,
   init.sigma = NULL, init.length_scale = 20, plot_stats = TRUE,
   verbose = TRUE)
 }
 \arguments{
-\item{y}{A numeric vector}
+\item{y}{A numeric vector of the outcomes.}
 
-\item{X}{A numeric vector or matrix}
+\item{X}{A numeric matrix of confounder variables.}
 
 \item{Z}{A vector or matrix (multivariate / tensor splines might be added in the future) Factors will be transformed to numeric using as.numeric. Hence, non-binary actors are discouraged especially when they are not ordinal.}
 
-\item{kernel}{A string (default: "SE" Squared exponential with ARD) -- has no effect, might include (ARD) polynomial and "Matern32", the Matern 3/2 kernel with ARD}
+\item{pi}{(Optional) A vector of propenbsity score that can be used for binary Z when the propensity score function is assumed to be in a different RKHS than the potential outcome function. NOTE that prediction needs to be done using \code{newZ = (Z - pi)}. For refrence see Hahn et al. (2018).}
 
-\item{basis}{A string (default: "binary" if Z is binary (factor) and "ns", natural cubic spline, for continuous or discrete Z}
+\item{kernel}{A string denoting the Mercer/Covariance Kernel (default: "SE"). Options:  "SE" - Squared exponential kernelwith ARD, and "Matern32" - the Matern 3/2 kernel with ARD.}
 
-\item{n.knots}{An integer denoting the  umber of internal knots of the spline of Z. Ignored if basis not a spline.}
+\item{basis}{A string (default: "binary"/"linear" if Z is binary and "ns", natural cubic spline, for continuous or discrete Z). Options: "linear" - 1rd order polynomial, "square" - 2rd order polynomial, "cubic" - 3rd order polynomial, "B" - B-spline, and "ns" - Natural cubic spline.}
 
-\item{optimizer}{A string (default: "Nadam" Nesterov-accelerated Adam). Other options are "GD" (gradient descent), "Nesterov" (accelerated gradient/momentum), "Adam".}
+\item{n.knots}{An integer denoting the number of internal knots of the spline of Z (default: 1). Ignored if the basis is not a spline.}
 
-\item{maxiter}{(default: 1000) Maximum number of iterations of the empirical Bayes optimization}
+\item{optimizer}{A string selecting the gradient optimizer (default: "Nadam"). Options: "GD" - gradient descent, "NAG" - Nesterov accelerated gradient descent, "Adam" - Adaptive moment estimation (Kingma & Ba, 2015), "Nadam" - Nesterov-accelerated Adam (Dozat, 2016).}
 
-\item{tol}{(default: 1e-4) Stopping tolerance for the empirical Bayes optimization}
+\item{maxiter}{An integer defining the maximum number of iterations  of the gradient-based empirical Bayes optimization (default: 1000).}
 
-\item{learning_rate}{(default: 0.001) Learning rate for the empirical Bayes optimization}
+\item{tol}{A numeric scalar defining the stopping tolerance for the gradient-based empirical Bayes optimization (default: 1e-4).}
 
-\item{beta1}{(default: 0.9) Learning parameter ("first moment") for the empirical Bayes optimization when using Adam or Nadam optimizers}
+\item{learning_rate}{An integer defining the learning rate for the gradient-based empirical Bayes optimization (default: 0.01).}
 
-\item{beta2}{(default: 0.999) Learning parameter ("second moment") for the empirical Bayes optimization when using Adam or Nadam optimizers}
+\item{beta1}{A numeric scalar defining the ("first moment") learning parameter for the Adam and Nadam optimizers (default: 0.9).}
 
-\item{momentum}{(default: 0.0) Momentum for the empirical Bayes optimization when using Nesterov. Equivalent to gradient descent ("GD") if momentum is 0.}
+\item{beta2}{A numeric scalar defining the ("second moment") learning parameter for the Adam and Nadam optimizers (default: 0.999).}
+
+\item{momentum}{Momentum for the empirical Bayes optimization when using Nesterov. Equivalent to gradient descent ("GD") if momentum is 0.
+(default: 0.0). Ignored for Nadam and Adam optimizers.}
+
+\item{norm.clip}{A boolean scalar defining whether the gradients should be clipped based on their norm (default: TRUE if optimizer is GD or NAG, FALSE if optimizer is Adam or Nadam)}
+
+\item{clip.at}{A numeric scalar defining the maximum L2-length of the gradients (default: 1). If the Euclidian length of the gradients is above this value, they will be proportionally shrunk to this maximum. Ignored if norm.clip is FALSE.}
+
+\item{init.sigma}{A numeric scaler defining the initial value for the noise variance (default: NULL). If NULL, uses the estimated noise variance of a linear regression.}
+
+\item{init.length_scale}{A numeric scalar defining the initial value of the length sclaes of the ARD kernel (default: 20). For large values the Kernel approximates a linear model, which can be a good initial guess, especially for discrete confounders.}
+
+\item{plot_stats}{A boolean scalar to turn off the plotting of the likelihood and RMSE learning curves (default: TRUE).}
+
+\item{verbose}{A boolean scalar to turn off any text output of the function (default: FALSE).}
 }
 \value{
-The function returns the fitted process as a GPspline class object. Predictions can be obtained using the corresponding S3 methods "prediction" and "marginal".
-The latter is the predicted curve with a differentiated basis of Z.
+The function returns the fitted process, together with relevant training settings, as an "ace" class object.
+Predictions of the outcome curves as well as the marginal response (over Z) can be obtained using the accompanying "prediction" S3 method; see examples.
 }
 \description{
-Fit a VCM basis model with Gaussian process priors on the coefficients
+This function fits a varying coefficient model with Gaussian process priors on the coefficients. The number of additive elements is determined by the expansion of the treatment variable.
+\itemize{
+\item For binary treatments this corresponds to the linear model form:\cr
+\code{y = m(x) + tau(x) z + eps}
+\item A continuous treatment with e.g. 3-rd order polynomial is fit using:\cr
+\code{y = m(x) + g_1(x) * z + g_2(x) * z^2 + g_3(x) * z^3 + eps}
+}
 }
 \examples{
-## Example replicating CausalStump with binary uni-variate Z
-# Generate data
 library(ace)
+## Example with binary treatment similar to Hill (2011)'s
+
 set.seed(1231)
 n <- 300
+
+# generate treatment
 Z <- rbinom(n, 1, 0.3)
-X1 <- rnorm(sum(Z), mean = 30,sd = 10)
-X0 <- rnorm(n-sum(Z), mean = 20, sd = 10)
-X2 <- runif(n)
+
+# generate confounder and exogenous variable
 X <- matrix(NaN, n, 1)
-X[Z==1, ] <- X1
-X[Z==0, ] <- X0
-X <- data.frame(X, X2)
-sort.idx <- sort(X[,1], index.return = TRUE)$ix
-y_truefun <- function(x,z) {
-    mat0 <- matrix(72 + 3 * (x[z == 0,1] > 0) * sqrt(abs(x[z == 0,1])), sum(z == 0), 1)
-    mat1 <- matrix(90 + exp(0.06 * x[z == 1,2]), sum(z == 1), 1)
+X[Z==1, ] <- rnorm(sum(Z), mean = 30,sd = 10)
+X[Z==0, ] <- rnorm(n - sum(Z), mean = 20, sd = 10)
+E <- runif(n) # exogenous variable
+X <- data.frame(X, E)
+
+# sort Confounder for visualizations
+sort.idx <- sort(X[, 1], index.return = TRUE)$ix
+
+# define and draw the reponse function
+y_truefun <- function(x, z) {
     mat <- matrix(NaN, length(z), 1)
-    mat[z==0, 1] <- mat0
-    mat[z==1, 1] <- mat1
-    c(mat)
-    }
+    mat[z==0, 1] <- matrix(72 + 3 * (x[z == 0,1] > 0) * sqrt(abs(x[z == 0, 1])), sum(z == 0), 1)
+    mat[z==1, 1] <- matrix(90 + exp(0.06 * x[z == 1, 2]), sum(z == 1), 1)
+    c(mat)}
 y0_true <- y_truefun(X, rep(0, n))
 y1_true <- y_truefun(X, rep(1, n))
 Y0 <- rnorm(n, mean = y0_true, sd = 1)
 Y1 <- rnorm(n, mean = y1_true, sd = 1)
-Y <- Y0 * (1-Z) + Y1 * Z
-pihatz = nnet(X, Z, size=10)$fitted.values
-# train model:
-my.GPS <- ace.train(Y, X, Z, pi = pihatz, kernel="SE", optimizer = "GD", learning_rate = 0.002, maxiter=2000)
+Y <- Y0 * (1 - Z) + Y1 * Z
+
+# run model
+my.ace <- ace.train(Y, X, Z,
+                    kernel = "SE", optimizer = "Nadam",
+                    learning_rate = 0.005, maxiter = 1000)
+
 # print (sample) average treatment effect (ATE)
-predict(my.GPS, marginal = TRUE, causal = TRUE)$ate
-predict(my.GPS, marginal = TRUE, causal = TRUE)$att
-robust_treatment(my.GPS)
-abline(a=mean(y1_true - y0_true), b=0)
-#true ATE
+my.pred <- predict(my.ace, marginal = TRUE, return_average_treatments = TRUE)
+
+# predicted vs actual ATE
+my.pred$ate
 mean(y1_true - y0_true)
-# plot response curves
-plot(my.GPS, 1, marginal = TRUE)
+
+# plot outcome/response curves
+plot_ace(my.ace, 1, marginal = FALSE)
+
 # plot treatment curve
-treat_truefun <- function(x) {y_truefun(x, rep(1, nrow(x))) - y_truefun(x, rep(0, nrow(x)))}
-plot(my.GPS, 1, marginal = TRUE, truefun = treat_truefun)
+plot_ace(my.ace, 1, marginal = TRUE)
+
+# Check for robustness of ATE:
+robust_treatment(my.ace, n.steps=5)
 
 ## Example with continuous Z
+
+# generate confounder and treatment (dosage)
 set.seed(1234)
 n2 <- 200
-X2 <- matrix(runif(n2, min = 1, max = 2))
-X3 <- matrix(runif(n2, min = 1, max = 2))
-X <- data.frame(X2, X3)
-Z2 <- rnorm(n2, exp(X2) - 10, 1)
-y_truefun <- function(x, z) {as.matrix(10 * x[,1] + (x[,1] - 1.5) * ((z + 9)^2 - 2 * z))}
-marg_truefun <- function(x, z) {as.matrix( (x[,1] - 1.5) * (2 * (z + 9) - 2))}
-y2_true <- y_truefun(X2, Z2)
-Y2 <- rnorm(n2, mean = y2_true, sd = 2)
-marg_true <- marg_truefun(X2, Z2)
-my.GPS <- ace.train(Y2, X, Z2,
-                    optimizer = "Nadam",
-                    learning_rate = 0.005,
-                    basis = "ncs")
-my.pred <- predict(my.GPS)
-# plot quality of prediction:
-plot(Y2, my.pred$map)
-abline(0, 1, lty = 2, col = "blue", lwd = 2)
-# comparison with the true curve:
-plot(my.GPS, 1, truefun = y_truefun, plot3D = TRUE)
-# plotting of the marginal curve:
-plot(my.GPS, 1, marginal=TRUE)
-# plot of the 2D curve with only Z
-plot(my.GPS, truefun = y_truefun)
+Xc <- data.frame(matrix(runif(2 * n2, min = 1, max = 2), n2, 2))
+Zc <- rnorm(n2, Xc[,1] + exp(Xc[,1]), exp(Xc[,1]))
+yc_truefun <- function(x, z) {as.matrix(20 * sin(10 * x[, 2] - 1.5)
+                                        + (x[, 1] - 1.5) * abs(z^3 - 2 * z)/100)
+                             }
 
+# generate response curve
+yc_true <- yc_truefun(Xc, Zc)
+Yc <- rnorm(n2, mean = yc_true, sd = 2)
+
+# train and predict model (in-sample)
+my.ace <- ace.train(Yc, Xc, Zc,
+                    optimizer = "Nadam",
+                    learning_rate = 0.01,
+                    basis = "ncs")
+my.pred <- predict(my.ace)
+
+# plot a 3D surface of the outcome response with respect to the confounder (column 1)
+plot_ace(my.ace, 1, plot3D = TRUE)
+
+# plot a 3D surface of the marginal response
+plot_ace(my.ace, 1, marginal = TRUE, plot3D = TRUE)
+
+# plot of the 2D curve with only Z using the mean for each dimension of X
+plot_ace(my.ace)
+
+}
+\references{
+\itemize{
+\item Dozat, T. (2016). "Incoproating Nesterov Momentum into Adam." Proceedings of the International Conference on Learning Representations
+\item Hahn, P. R., C. M. Carvalho, D. Puelz, and J. He (2018). "Regularization and Confounding in Linear Regression for Treatment Effect Estimation." Bayesian Analysis, Vol 13, No 1, pp. 163-182.
+\item Hill, J. (2011). "Bayesian Nonparametric Modeling for Causal Inference." Journal of Computational and Graphical Statistics, Vol. 20, No. 1, pp. 217–240.
+\item Kingma, D. and Ba, J. (2015). "Adam: A method for stochastic optimization." Proceedings of the International Conference on Learning Representations
+}
+}
+\author{
+Philip Pilgerstorfer <philip at pilgerstorfer.org>
 }
