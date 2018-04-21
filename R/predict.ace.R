@@ -1,15 +1,33 @@
-#' Predict the the response surface and the marginal response wrt Z using the Gaussian process fit.
+#' Prediction of a fitted Additive Causal Expansion model
 #'
-#' @param object An "ace" object from the ace
-#' @param newX A matrix with new data. If not presented, using the training data.
-#' @param newZ A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.
-#' @param marginal A logical
-#' @param causal logical
+#' Predict the the response surface and the marginal response with respect to the treatment using a fitted "ace" model.
+#' In case of binary treatments, the marginal response surface is the (heterogeneous) treatment effect. Optionally, the average treatment effect that takes into account all covariances of the posterior can be returned.
+#'
+#' @param object An "ace" object returned from the ace.train function.
+#' @param newX (Optional) A matrix with new data. Using the training data if missing.
+#' @param newZ (Optional) A vector, matrix or scalar with new treatment data. If it is a scalar, it predicts using the same value for all observations. If missing, it uses the training data.
+#' @param marginal Logical flag that determines whether to predict the response surface (FALSE) or the marginal response surface/heterogeneous treatment effect (TRUE) (default: FALSE).
+#' @param return_average_treatments Logical flag that determines whether treatment effect averages (ATE, ATT, ATU) are returned (default: False). Ignored if `marginal + FALSE`
+#' @param normalize  For internal use (default: True). A logical scalar that determines whether new data is normalized using training moments.
+#' @param ... Ignored.
 
-#' @return Returns the MAP and the 95 percent credible interval of the fitted process as a list.
+#' @return{
+#' For the estimate of the response surface (`marginal = FALSE`) or marginal response (`marginal = TRUE`), the method returns a list with
+#' \itemize{
+#' * Maximum a priori (`map`) estimate (here: mean)
+#' * 95 percent credible interval (`ci`) for each prediction point
+#' * Posterior variance (`var`) for each prediction point
+#' * If `marginal = TRUE` and `return_average_treatments = TRUE`:
+#' \itemize{
+#'  * (Sample) Average Treatment Effect: `ate` with `map`, `ci`, and `var`
+#'  * (Sample) Average Treatment effect of the Treated: `att` with `map`, `ci`, and `var`
+#'  * (Sample) Average Treatment effect of the Untreated: `atu` with `map`, `ci`, and `var`
+#'  }
+#' }
+#' }
+#' @export
 
-
-predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, normalize = TRUE){
+predict.ace <- function(object, newX, newZ, marginal = FALSE, return_average_treatments = FALSE, normalize = TRUE, ...){
   isbinary <- object$train_data$Zbinary
   px <- ncol(object$train_data$X)
   pz <- ncol(object$train_data$Z)
@@ -75,7 +93,7 @@ predict.ace <- function(object, newX, newZ, marginal = FALSE, causal = FALSE, no
                                                 mean_y = object$moments[1, 1],
                                                 std_y = object$moments[1, 2],
                                                 std_Z = object$moments[(2 + px):(1 + px + pz), 2],
-                                                calculate_ate = (isbinary && causal))
+                                                calculate_ate = (isbinary && return_average_treatments))
   }
   invisible(pred_list)
 }
