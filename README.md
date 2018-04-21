@@ -8,13 +8,14 @@ install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/maste
 ```
 ### Platforms
 Generally, need to verify that Lapack and Arpack libraries are installed (required by Armadillo):
-- Mac OS: Requires Lapack and Arpack with non-system gcc compiler
+
+- Mac OS: Requires Lapack and Arpack with non-system ```g++``` compiler (llvm), for example using: https://github.com/coatless/r-macos-rtools
 - Ubuntu 16.04: Requires manual installation of Arpack (and Lapack if not already installed)
 ```
 sudo apt-get install libarpack2-dev libarpack++2-dev
 sudo apt-get install liblapack-dev libblas-dev libatlas-base-dev 
 ```
-* AWS Linux (RHEL 7+ & Fedora 19+): Needs more testing
+* AWS Linux (+ RHEL & Fedora): Needs more testing
 * Windows: Requires ```Rtools``` and manual installation of [Lapack](https://gcc.gnu.org/wiki/LAPACK%20on%20Windows) & [Arpack](http://www-bcf.usc.edu/~jbarbic/arpack.html) for MINGW (not fully tested)
 
 ## Theory
