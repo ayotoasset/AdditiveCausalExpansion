@@ -2,14 +2,19 @@
 language: r
 cache: packages
 
+os:
+  - linux
+  # - osx
+
 r:
-  - oldrel
+  #- oldrel
   - release
-  - devel
+  #- devel
 
 addons:
   apt:
     packages:
       - libarpack2-dev
       - libarpack++2-dev
+
 

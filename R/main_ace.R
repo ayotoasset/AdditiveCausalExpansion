@@ -11,7 +11,7 @@
 #' @author Philip Pilgerstorfer <philip at pilgerstorfer.org>
 #' @import Rcpp
 #' @importFrom Rcpp evalCpp
-#' @useDynLib ace
+#' @useDynLib ace, .registration=TRUE
 #'
 #' @param y A numeric vector of the outcomes.
 #' @param X A numeric matrix of confounder variables.
