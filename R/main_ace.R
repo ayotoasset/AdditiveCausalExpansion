@@ -91,6 +91,12 @@
 #' # plot outcome/response curves
 #' plot_ace(my.ace, 1, marginal = FALSE)
 #'
+#' # plot treatment curve
+#' plot_ace(my.ace, 1, marginal = TRUE)
+#'
+#' # Check for robustness of ATE:
+#' robust_treatment(my.ace, n.steps=5)
+#'
 #' ## Example with continuous Z
 #'
 #' # generate confounder and treatment (dosage)
@@ -231,7 +237,8 @@ ace.train <- function(y, X, Z, pi,
   if (plot_stats) plot_train_stats(stats)
 
   #if(!missing(pi)) Z.intern <- (as.matrix(rlang::duplicate(Z)) - moments[2 + px, 1]) / moments[2 + px, 2]
-
+  # reset graphics setting
+  graphics::par(mfrow=c(1,1))
   invisible(structure(list(Kernel = myKernel, Basis = myBasis, OptimSettings = list(optim = optimizer,
                                                                             lr = learning_rate,
                                                                             momentum = momentum,
