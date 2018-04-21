@@ -8,4 +8,4 @@
 ^benchmark
 ^archive
 ^cran-comments.md
-
+^.travis.yml

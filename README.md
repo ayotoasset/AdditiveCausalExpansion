@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/mazphilip/AdditiveCausalExpansion.svg?branch=master)](https://travis-ci.org/mazphilip/AdditiveCausalExpansion)
+
 # ACE - Additive Causal Expansion Model
 This is a package for a varying-coefficient regression with Gaussian process priors on the varying coefficients. The coefficient functions are dependent on the confounders. The linear elements are the basis expansion of the treatment variable, allowing for causal inference for continuous variables.
 
