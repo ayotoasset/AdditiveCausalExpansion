@@ -1,14 +1,14 @@
 Package: ace
 Type: Package
-Title: Additive Causal Expansion model
-Version: 0.4.0
-Date: 2017-12-27
+Title: Additive Causal Expansion Model
+Version: 0.4.1
+Date: 2018-04-21
 Author@R: person(Philip,Pilgerstorfer,email = "philip at pilgerstorfer.org", role = c("aut", "cre"))
 Author: Philip Pilgerstorfer [aut, cre]
 Maintainer: Philip Pilgerstorfer <philip@pilgerstorfer.org>
-Description: Package for a varying coefficient model for a basis expanded 
-    treatment variable and Gaussian process-priors on the coefficients 
-    that depend on the confounding variables.
+Description: Package for a Bayesian semi=parametric varying coefficient model with basis expanded 
+    treatment variable. It assumes Gaussian process-priors on the coefficients 
+    that depend on the confounding variables. It allows for general treatment variables.
 License: GPL-2
 BugReports: https://github.com/mazphilip/AdditiveCausalExpansion/issues
 URL: https://github.com/mazphilip/AdditiveCausalExpansion

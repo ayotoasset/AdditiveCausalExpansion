@@ -6,7 +6,7 @@ This is a package for a varying-coefficient regression with Gaussian process pri
 ## Installation
 It can be installed using (requires appropriate c++ compilers, see the documentation of ```Rcpp```):
 ```
-install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/ace_0.4.0.tar.gz", repos = NULL, type = "source")
+install.packages("https://github.com/mazphilip/AdditiveCausalExpansion/raw/master/builds/ace_0.4.1.tar.gz", repos = NULL, type = "source")
 ```
 ### Platforms
 Generally, need to verify that Lapack and Arpack libraries are installed (required by Armadillo):
