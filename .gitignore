@@ -5,8 +5,6 @@ todo
 .Rhistory
 .RData
 .Ruserdata
-src/RcppExports.cpp
-R/RcppExports.R
 
 #ignore folders
 archive/
