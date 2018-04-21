@@ -12,7 +12,7 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                      p = NULL,
                                      stdy = 1,
                                      initialize = function(p_arg, B_arg, ext_init_parameters, std_y_arg=1, verbose=FALSE) {
-                                       if (verbose) cat("Using Matérn 3/2 kernel\n")
+                                       if (verbose) cat("Using Matern 3/2 kernel\n")
                                        B <<- B_arg
                                        p <<- p_arg
                                        parameters <<- ext_init_parameters
@@ -52,8 +52,8 @@ KernelClass_Matern32_R6 <- R6::R6Class("Matern32",
                                        mean_solution(y) # overwrites mu gradient update
 
                                        if ((iter %% printevery == 0)  && verbose) {
-                                         cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f | Norm noise var: %3.4f\n",
-                                                     iter, stats[2], stats[1], exp(parameters[1])))
+                                         cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f | Norm. noise var: %3.4f | Gradient L2: %3.4f\n",
+                                                     iter, stats[2], stats[1], exp(parameters[1]), norm(gradients)))
                                        }
 
                                        stats
