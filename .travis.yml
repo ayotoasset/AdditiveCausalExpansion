@@ -22,4 +22,4 @@ matrix:
 
 script:
 - R CMD build .
-- R CMD check --as-cran  *tar.gz
+- R CMD check --as-cran --no-manual *tar.gz
