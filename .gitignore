@@ -1,5 +1,4 @@
 #ignore files explicitely
-xgboost.model
 todo
 .Rproj.user
 .Rhistory
