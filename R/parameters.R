@@ -21,38 +21,3 @@ set_initial_parameters <- function(p, B, n, y, X, Z, init.sigma, init.length_sca
 
   invisible(parameters)
 }
-
-#generate_random_parameters <- function(p, B) {
-#  parameters <- matrix(c(runif(1, min=-2, max=2), #sigma
-#                         rnorm(1), # mu
-#                         runif(B, min=-2, max=2),
-#                         rep(runif(1, min=-1, max=1), B*p) # ARD parameters
-#                         )
-#                       )
-#  invisible(parameters)
-#}
-#
-#gen_random_para_list <- function(len, p, B){
-#  output <- list(generate_random_parameters(p, B))
-#  if (len >= 2) {
-#    for (i in 2:len) {
-#      output[[i]] <- generate_random_parameters(p, B)
-#    }
-#  }
-#
-#  output
-#}
-
-
-#n <- length(y)
-#parameters <<- matrix(c(2 * B,0, # sigma, mu
-#                         (c(1, rep(1, B - 1))), # use inner product to scale
-#                        rep(c(-0.1, rep(0.1, B - 1)), p) # ARD parameters
-#                        )
-#                     )
-#
-#
-#
-#
-#
-#
