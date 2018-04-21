@@ -9,12 +9,13 @@ os:
 latex: false
 
 r:
+  - 3.2
   - oldrel
   - release
   - devel
 
 matrix:
   allow_failures:
-    - os: osx
+    - r: devel
 
 
