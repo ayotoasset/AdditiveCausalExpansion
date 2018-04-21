@@ -16,8 +16,7 @@ r:
 
 matrix:
   allow_failures:
-    r:
-    - devel
-    - 3.2
+    - r: devel
+    - r: 3.2
 
 
