@@ -20,4 +20,6 @@ matrix:
     - r: devel
     - r: 3.2
 
-
+script:
+- R CMD build .
+- R CMD check --as-cran  *tar.gz
