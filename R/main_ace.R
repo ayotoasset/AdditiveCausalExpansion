@@ -140,7 +140,7 @@ ace.train <- function(y, X, Z, pi,
                       beta1             = 0.9,
                       beta2             = 0.999,
                       momentum          = 0.0,
-                      norm.clip         = (optimizer %in% c("Adam", "Nadam")),
+                      norm.clip         = (optimizer %in% c("GD", "NAG")),
                       clip.at           = 1,
                       init.sigma        = NULL, #Default:
                       init.length_scale = 20, #gives a roughly linear model (-> infty)
