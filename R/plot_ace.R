@@ -67,8 +67,9 @@ plot_ace <- function(object, Xcol, marginal = FALSE, plot3D = FALSE, show.observ
   quantX <- matrix(NaN, 3, px)
   for(i in 1:px) {
     quantX[, i] <- stats::quantile(object$train_data$X[, i] * object$moments[(i + 1), 2] + object$moments[(i + 1), 1], probs=c(0.25, 0.5, 0.75))
-    medX[1, i]  <- stats::median(  object$train_data$X[, i] * object$moments[(i + 1), 2] + object$moments[(i + 1), 1])
+    #medX[1, i]  <-stats::median(  object$train_data$X[, i] * object$moments[(i + 1), 2] + object$moments[(i + 1), 1])
   }
+  medX[1, ] <- object$moments[2:(px+1), 1]
 
   if(!missing(Xcol)) {
     #stop("Supply either a numeric column index for X, or if the object was generated with the data.frame wrapper, a valid variable name.\n")
@@ -377,6 +378,5 @@ plot_ace <- function(object, Xcol, marginal = FALSE, plot3D = FALSE, show.observ
       cat("No plot produced, need to specify an X-column for binary Z")
       FALSE
     }
-
   }
 }
