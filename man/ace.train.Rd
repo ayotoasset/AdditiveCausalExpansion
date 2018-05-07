@@ -7,7 +7,7 @@
 ace.train(y, X, Z, pi, kernel = "SE", basis = "linear", n.knots = 1,
   optimizer = "Nadam", maxiter = 1000, tol = 1e-04,
   learning_rate = 0.01, beta1 = 0.9, beta2 = 0.999, momentum = 0,
-  norm.clip = (optimizer \%in\% c("Adam", "Nadam")), clip.at = 1,
+  norm.clip = (optimizer \%in\% c("GD", "NAG")), clip.at = 1,
   init.sigma = NULL, init.length_scale = 20, plot_stats = TRUE,
   verbose = TRUE)
 }
