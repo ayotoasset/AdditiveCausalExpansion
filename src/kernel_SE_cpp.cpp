@@ -141,16 +141,17 @@ Rcpp::List invkernel_cpp(arma::mat pdmat,
   //arma::mat eigvec = pdmat;
   pdmat.diag() += exp(sigma);
 
-  if(!arma::eig_sym(eigval, pdmat, pdmat)){
+  arma::mat U(n, n); //, V(n, n);
+  // re-use pdmat for memory efficienvy
+  if(!arma::svd_econ(U, eigval, pdmat, pdmat)){
     Rcout << "Eigenvalue decomp. not completed." << std::endl;
   }
 
-  //get inverse and eigenvalues
-  //arma::mat invKmat = pdmat;
+  //get inverse
   for(unsigned int i = 0; i < n; i++){
-    pdmat.col(i) = pdmat.col(i) / sqrt(eigval[i]);
+    pdmat.col(i) = pdmat.col(i) / eigval[i];
   }
-  pdmat = pdmat * pdmat.t();
+  pdmat = pdmat * U.t();
 
   return Rcpp::List::create(_("eigenval") = eigval,
                             _("inv") = pdmat);
