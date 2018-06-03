@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 // [[Rcpp::export]]
 Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
-                    const arma::mat& invK_XX, arma::mat& K_xX,arma::mat K_xx,
+                    const arma::mat& invK_XX, arma::mat& K_xX, arma::mat K_xx,
                     double mean_y, double std_y){
   unsigned int nx = K_xx.n_rows;
   unsigned int nX = invK_XX.n_rows;
@@ -23,7 +23,15 @@ Rcpp::List pred_cpp(const arma::vec& y_X, const double sigma, const double mu,
   K_xx.diag() += exp(sigma);
   //absolute value for nuemric stability
 
-  var = std_y * sqrt(abs(K_xx.diag()));
+  // This is due to numeric instability!
+  // TODO: Change calculation of inverse to more numeric stable, e.g. cholesky + solving system
+  arma::vec diag_var = K_xx.diag();
+  if (arma::any(diag_var < 0)) {
+    Rcpp::Rcout << "New lower bound on variance" << std::endl;
+    diag_var -= arma::min(diag_var.elem(find(diag_var < 0)));
+  }
+
+  var = std_y * sqrt(K_xx.diag());
   ci.col(0) = y_x - 1.96 * var;
   ci.col(1) = y_x + 1.96 * var;
   var = pow(var, 2);
@@ -71,8 +79,16 @@ Rcpp::List pred_marginal_cpp(const arma::vec& y_X, const arma::colvec& Z_x, cons
 
   Kmarg_xx = Kmarg_xx - tmp * Kmarg_xX.t(); //saving storage
 
+
+
+  arma::vec diag_var = Kmarg_xx.diag();
+  if (arma::any(diag_var < 0)) {
+    Rcpp::Rcout << "New lower bound on variance" << std::endl;
+    diag_var -= arma::min(diag_var.elem(find(diag_var < 0)));
+  }
+
   //taking absolute value as this can be numerically unstable:
-  var = std_y * sqrt(abs(Kmarg_xx.diag())) / std_Z;
+  var = std_y * sqrt(diag_var) / std_Z;
   ci.col(0) = y_x - 1.96 * var;
   ci.col(1) = y_x + 1.96 * var;
   var = pow(var, 2);
