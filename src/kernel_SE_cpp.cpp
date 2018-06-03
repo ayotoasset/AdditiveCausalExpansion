@@ -138,11 +138,10 @@ Rcpp::List invkernel_cpp(arma::mat pdmat,
                          const double& sigma){
   unsigned int n = pdmat.n_cols;
   arma::vec eigval(n); eigval.ones();
-  //arma::mat eigvec = pdmat;
+  arma::mat U(n, n); //, V(n, n);
+  // re-use pdmat for V for memory efficienvy
   pdmat.diag() += exp(sigma);
 
-  arma::mat U(n, n); //, V(n, n);
-  // re-use pdmat for memory efficienvy
   if(!arma::svd_econ(U, eigval, pdmat, pdmat)){
     Rcout << "Eigenvalue decomp. not completed." << std::endl;
   }
