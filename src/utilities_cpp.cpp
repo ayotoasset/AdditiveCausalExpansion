@@ -29,15 +29,15 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
       isbinary(i) = moments(i + 1, 2) = 1;
       if(arma::min(tmp) != 0) {
         //set smaller value to zero
-        moments(i, 0) = arma::min(tmp);
+        moments(i + 1, 0) = arma::min(tmp);
       }
       if(arma::max(tmp) != 1) {
         //set larger value to one
-        moments(i, 1) = (arma::max(tmp)- arma::min(tmp));
+        moments(i + 1, 1) = (arma::max(tmp) - arma::min(tmp));
       }
       // locate and scale:
-      X.col(i) -= moments(i, 0);
-      X.col(i) /= moments(i, 1);
+      X.col(i) -= moments(i + 1, 0);
+      X.col(i) /= moments(i + 1, 1);
 
     } else if(tmp.n_elem == 1) {
       Rcout << "Column " << i + 1 << " of X is constant." << std::endl;
@@ -45,21 +45,21 @@ arma::mat normalize_train(arma::vec& y, arma::mat& X, arma::mat& Z) {
     }
   }
   // Z
-  for(unsigned int i = px; i < (px + pz); i++){
-    tmp = arma::unique(Z.col(i - px));
+  for(unsigned int i = 0; i < pz; i++){
+    tmp = arma::unique(Z.col(i));
     if(tmp.n_elem == 2) {
-      isbinary(i) = moments(i + 1, 2) = 1;
+      isbinary(i + px) = moments(i + px + 1, 2) = 1;
       if(arma::min(tmp) != 0) {
         //set smaller value to zero
-        moments(i, 0) = arma::min(tmp);
+        moments(i + px + 1, 0) = arma::min(tmp);
       }
       if(arma::max(tmp) != 1) {
         //set larger value to one
-        moments(i, 1) = (arma::max(tmp)- arma::min(tmp));
+        moments(i + px + 1, 1) = (arma::max(tmp)- arma::min(tmp));
       }
       // locate and scale:
-      Z.col(i - px) -= moments(i, 0);
-      Z.col(i - px) /= moments(i, 1);
+      Z.col(i) -= moments(i + px + 1, 0);
+      Z.col(i) /= moments(i + px + 1, 1);
     } else if(tmp.n_elem == 1){
       Rcout << "Column " << i << " of Z is constant." << std::endl;
       Z.col(i).zeros();
@@ -109,7 +109,7 @@ void normalize_test(arma::mat& X, arma::mat& Z, const arma::mat& moments) {
   unsigned int px = X.n_cols;
   unsigned int pz = Z.n_cols;
 
-    for(unsigned int i = 0; i < px; i++){
+  for(unsigned int i = 0; i < px; i++){
     X.col(i) = (X.col(i) - moments(i + 1, 0)) / moments(i + 1, 1);
   }
   for(unsigned int i = 0; i < pz; i++){
