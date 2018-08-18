@@ -20,12 +20,12 @@
 #' @param kernel A string denoting the Mercer/Covariance Kernel (default: "SE"). Options:  "SE" - Squared exponential kernelwith ARD, and "Matern32" - the Matern 3/2 kernel with ARD.
 #' @param basis A string (default: "binary"/"linear" if Z is binary and "ns", natural cubic spline, for continuous or discrete Z). Options: "linear" - 1rd order polynomial, "square" - 2rd order polynomial, "cubic" - 3rd order polynomial, "B" - B-spline, and "ns" - Natural cubic spline.
 #' @param n.knots An integer denoting the number of internal knots of the spline of Z (default: 1). Ignored if the basis is not a spline.
-#' @param optimizer A string selecting the gradient optimizer (default: "Nadam"). Options: "GD" - gradient descent, "NAG" - Nesterov accelerated gradient descent, "Adam" - Adaptive moment estimation (Kingma & Ba, 2015), "Nadam" - Nesterov-accelerated Adam (Dozat, 2016).
+#' @param optimizer A string selecting the gradient optimizer (default: "NAG"). Options: "GD" - gradient descent, "NAG" - Nesterov accelerated gradient descent, "Adam" - Adaptive moment estimation (Kingma & Ba, 2015), "Nadam" - Nesterov-accelerated Adam (Dozat, 2016).
 #' @param maxiter  An integer defining the maximum number of iterations  of the gradient-based empirical Bayes optimization (default: 1000).
 #' @param tol A numeric scalar defining the stopping tolerance for the gradient-based empirical Bayes optimization (default: 1e-4).
 #' @param learning_rate An integer defining the learning rate for the gradient-based empirical Bayes optimization (default: 0.01).
-#' @param beta1 A numeric scalar defining the ("first moment") learning parameter for the Adam and Nadam optimizers (default: 0.9).
-#' @param beta2 A numeric scalar defining the ("second moment") learning parameter for the Adam and Nadam optimizers (default: 0.999).
+#' @param beta1 A numeric scalar defining the ("first moment") learning parameter for the Adam and Nadam optimizers (default: 0.5, in NN often 0.9).
+#' @param beta2 A numeric scalar defining the ("second moment") learning parameter for the Adam and Nadam optimizers (default: 0.0, in NN often 0.999).
 #' @param momentum Momentum for the empirical Bayes optimization when using Nesterov. Equivalent to gradient descent ("GD") if momentum is 0.
 #' (default: 0.0). Ignored for Nadam and Adam optimizers.
 #' @param norm.clip A boolean scalar defining whether the gradients should be clipped based on their norm (default: TRUE if optimizer is GD or NAG, FALSE if optimizer is Adam or Nadam)
@@ -33,6 +33,7 @@
 #' @param init.sigma A numeric scaler defining the initial value for the noise variance (default: NULL). If NULL, uses the estimated noise variance of a linear regression.
 #' @param init.length_scale A numeric scalar defining the initial value of the length sclaes of the ARD kernel (default: 20). For large values the Kernel approximates a linear model, which can be a good initial guess, especially for discrete confounders.
 #' @param plot_stats A boolean scalar to turn off the plotting of the likelihood and RMSE learning curves (default: TRUE).
+#' @param init_iter An integer scalar determining how many pre-rpocessing iterations for the noise variance should be done. (Default: 0)
 #' @param verbose A boolean scalar to turn off any text output of the function (default: FALSE).
 #'
 #' @return The function returns the fitted process, together with relevant training settings, as an "ace" class object.
@@ -132,9 +133,9 @@
 ace.train <- function(y, X, Z, pi,
                       kernel            = "SE",
                       basis             = "linear",
-                      n.knots           = 1,
-                      optimizer         = "Nadam",
-                      maxiter           = 1000,
+                      n.knots           = 1L,
+                      optimizer         = "NAG",
+                      maxiter           = 1000L,
                       tol               = 1e-4,
                       learning_rate     = 0.01,
                       beta1             = 0.9,
@@ -145,6 +146,7 @@ ace.train <- function(y, X, Z, pi,
                       init.sigma        = NULL, #Default:
                       init.length_scale = 20, #gives a roughly linear model (-> infty)
                       plot_stats        = TRUE,
+                      init_iter         = 0L,
                       verbose=TRUE) {
 
   if (is.factor(y)) stop("y is not numeric. This package does not support classification tasks.")
@@ -211,6 +213,11 @@ ace.train <- function(y, X, Z, pi,
 
   ### run iterations:
   stats <- matrix(0, 2, maxiter + 2) #Evidence and RMSE
+
+  if ((init_iter > 0) & (class(myKernel) == "SqExpKernel")) { # not implemented for Matern
+      myKernel$init_variance(init_iter, y, X.intern, myBasis$B, myOptimizer, verbose=verbose)
+  }
+
 
   for(iter in 1:maxiter){
     stats[, iter + 1] <- myKernel$para_update(iter, y, X.intern, myBasis$B, myOptimizer, verbose=verbose)

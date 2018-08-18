@@ -37,6 +37,35 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
                                    invKmatn <<- invKmatList$inv
                                    invisible(invKmatList)
                                  },
+                                 init_variance = function(init_iter, y, X, Z, Optim, verbose=TRUE, lr_multiplier=10) {
+                                   # TODO: make efficient by calculating only the variance gradient instead of all gradients (in grad_SE_cpp)
+
+                                   stats <- get_train_stats(y, X, Z)
+                                   if (verbose) cat(sprintf("PRE |  0 | log Evidence %9.4f | RMSE %9.4f | Norm. noise var: %3.4f\n",
+                                               stats[2], stats[1], exp(parameters[1])))
+
+                                   Optim$lr <- Optim$lr * lr_multiplier
+                                   for (iter in 1:init_iter) {
+                                     eigenval <- getinv_kernel(X, Z)$eigenval;
+                                     gradients <- grad_SE_cpp(y, X, Z,
+                                                              Kmat, Karray,
+                                                              invKmatn, eigenval,
+                                                              parameters, stats, B, stdy)
+
+                                     gradients[2:length(gradients)] <- 0
+                                     parameters <<- Optim$update(iter, parameters, gradients)
+                                     private$mean_solution(y)
+                                   }
+                                   #if ((class(Optim)=="AdamOpt") | (class(Optim)=="NadamOpt")) {
+                                   #  Optim$m[0] <- 0
+                                   #  Optim$v[0] <- 0
+                                   #}
+
+                                   if (verbose) cat(sprintf("PRE | %d | log Evidence %9.4f | RMSE %9.4f | Norm. noise var: %3.4f\n",
+                                               init_iter, stats[2], stats[1], exp(parameters[1])))
+                                   Optim$lr <- Optim$lr / lr_multiplier
+
+                                 },
                                  para_update = function(iter, y, X, Z, Optim, printevery=100, verbose=TRUE) {
                                    #update Kmat and invKmat in the class environment
                                    stats <- c(0, 0)
@@ -48,12 +77,13 @@ KernelClass_SE_R6 <- R6::R6Class("SqExpKernel",
                                                             Kmat, Karray,
                                                             invKmatn, eigenval,
                                                             parameters, stats, B, stdy)
+                                   #print(gradients)
 
                                    parameters <<- Optim$update(iter, parameters, gradients)
 
                                    private$mean_solution(y)
 
-                                   if ((iter %% printevery == 0)  && verbose) {
+                                   if ((iter %% printevery == 0) && verbose) {
                                      cat(sprintf("%5d | log Evidence %9.4f | RMSE %9.4f | Norm. noise var: %3.4f | Gradient L2: %3.4f\n",
                                                  iter, stats[2], stats[1], exp(parameters[1]), norm(gradients)))
                                    }
