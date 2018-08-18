@@ -35,11 +35,17 @@ bool Nadam_cpp(double iter,
   //use references to update
   m = beta1 * m + (1 - beta1) * grad;
   v = beta2 * v + (1 - beta2) * arma::pow(grad, 2);
-  para = para + learn_rate * ((beta1 * m  + (1 - beta1) * grad ) / (1 - pow(beta1, iter)) ) /
-                                              (sqrt(v / (1 - pow(beta2, iter))) + eps);
+
+  //Rcpp::Rcout << "Update: " << ((beta1 * m  + (1 - beta1) * grad ) / (1 - pow(beta1, iter)) ) / (sqrt(v / (1 - pow(beta2, iter))) + eps) << std::endl;
+
+  arma::vec numer = (beta1 * m  + (1 - beta1) * grad ) / (1 - pow(beta1, iter));
+  arma::vec denom = (sqrt(v / (1 - pow(beta2, iter))) + eps);
+
+  para = para + learn_rate * numer / denom;
 
   return output_flag;
 }
+
 
 // [[Rcpp::export]]
 bool Adam_cpp(double iter,
@@ -54,10 +60,14 @@ bool Adam_cpp(double iter,
 
   bool output_flag = arma::is_finite(grad);
 
-  //use references to update
+  // use references to update
   m = (beta1 * m) + (1-beta1) * grad;
-  v = beta2 * v + (1-beta2) * arma::pow(grad,2);
-  para = para + learn_rate * (m  / (1-pow(beta1,iter)) ) / ( sqrt(v / (1-pow(beta2,iter)) ) + eps);
+  v = beta2 * v + (1-beta2) * arma::pow(grad, 2);
+
+  arma::vec numer = m / (1 - pow(beta1, iter));
+  arma::vec denom =  sqrt(v / (1 - pow(beta2, iter))) + eps;
+
+  para = para + learn_rate * numer / denom;
 
   return output_flag;
 }
