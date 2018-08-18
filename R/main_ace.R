@@ -214,7 +214,7 @@ ace.train <- function(y, X, Z, pi,
   ### run iterations:
   stats <- matrix(0, 2, maxiter + 2) #Evidence and RMSE
 
-  if ((init_iter > 0) & (class(myKernel) == "SqExpKernel")) { # not implemented for Matern
+  if ((init_iter > 0) & (kernel == "SE")) { # not implemented for Matern
       myKernel$init_variance(init_iter, y, X.intern, myBasis$B, myOptimizer, verbose=verbose)
   }
 
