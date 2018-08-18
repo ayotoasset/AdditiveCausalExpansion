@@ -18,6 +18,10 @@ optAdam <- R6::R6Class("AdamOpt",
                              beta2 <<- beta2
                              norm.clip <<- norm.clip
                              clip.at <<- clip.at
+
+                             if (beta2 <= 0.02) {
+                               cat("Adam:Beta2 is very small. This can lead to numeric instability.\n")
+                             }
                            },
                            update = function(iter, parameters, gradients) {
 
@@ -50,6 +54,10 @@ optNadam <- R6::R6Class("NadamOpt",
                             beta2 <<- beta2
                             norm.clip <<- norm.clip
                             clip.at <<- clip.at
+
+                            if (beta2 <= 0.02) {
+                              cat("Nadam:Beta2 is very small. This can lead to numeric instability.\n")
+                            }
                           },
                           update = function(iter, parameters, gradients) {
 
@@ -89,5 +97,5 @@ optNesterov <- R6::R6Class("NesterovOpt",
                                }
                                parameters
                              }) # end public
-) # end Nadam class
+) # end NAG class
 
